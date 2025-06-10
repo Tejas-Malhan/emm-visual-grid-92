@@ -1,13 +1,13 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, X } from "lucide-react";
+import { ArrowLeft, Play, X, Grid3X3, List } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Videos = () => {
   const [selectedVideo, setSelectedVideo] = useState<number | null>(null);
   const [filter, setFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Mock data for video items
   const videoItems = [
@@ -19,42 +19,58 @@ const Videos = () => {
     { id: 6, artist: "Maya", title: "Event Highlights", description: "Corporate event coverage", category: "event" },
   ];
 
-  const artists = ["all", "Emma", "Marcus", "Maya"];
-  const categories = ["all", "cinematic", "music", "wedding", "commercial", "documentary", "event"];
+  const filters = ["all", "Emma", "Marcus", "Maya", "cinematic", "music", "wedding", "commercial", "documentary", "event"];
 
   const filteredItems = videoItems.filter(item => 
     filter === "all" || item.artist === filter || item.category === filter
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white text-black">
       {/* Navigation */}
-      <nav className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-6 py-4">
+      <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center text-lg font-semibold">
-              <ArrowLeft className="mr-2 h-5 w-5" />
-              Back to Home
+            <Link to="/" className="flex items-center text-lg font-medium">
+              <ArrowLeft className="mr-3 h-5 w-5" />
+              Back
             </Link>
-            <h1 className="text-2xl font-bold">Video Gallery</h1>
-            <div className="w-24"></div>
+            <h1 className="text-2xl font-light tracking-tight">Videos</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="bg-black text-white hover:bg-gray-800"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="bg-black text-white hover:bg-gray-800"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* Filters */}
-      <section className="py-8 px-6 border-b border-border">
-        <div className="container mx-auto">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {[...artists, ...categories.slice(1)].map((filterOption) => (
+      <section className="py-8 px-6 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-wrap gap-2">
+            {filters.map((filterOption) => (
               <Button
                 key={filterOption}
-                variant={filter === filterOption ? "default" : "outline"}
+                variant={filter === filterOption ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setFilter(filterOption)}
-                className="capitalize"
+                className={filter === filterOption ? "bg-black text-white" : "text-gray-600 hover:text-black hover:bg-gray-50"}
               >
-                {filterOption}
+                {filterOption === "all" ? "All Videos" : filterOption}
               </Button>
             ))}
           </div>
@@ -62,59 +78,76 @@ const Videos = () => {
       </section>
 
       {/* Video Grid */}
-      <section className="py-8 px-6">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {filteredItems.map((item, index) => (
-              <div
-                key={item.id}
-                className="aspect-[9/16] bg-muted rounded-lg overflow-hidden group cursor-pointer hover:scale-105 transition-all duration-300 relative"
-                onClick={() => setSelectedVideo(index)}
-              >
-                <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20 flex items-center justify-center">
-                  <div className="bg-background/80 rounded-full p-4 group-hover:bg-background transition-colors">
-                    <Play className="h-8 w-8 text-foreground" />
+      <section className="py-12 px-6">
+        <div className="max-w-7xl mx-auto">
+          {viewMode === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="aspect-video bg-gray-200 overflow-hidden group cursor-pointer"
+                  onClick={() => setSelectedVideo(index)}
+                >
+                  <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover:bg-gray-300 transition-colors duration-300">
+                    <div className="bg-white/90 rounded-full p-4 group-hover:bg-white transition-colors">
+                      <Play className="h-8 w-8 text-black" />
+                    </div>
                   </div>
                 </div>
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
-                  <Badge variant="secondary" className="mb-2 text-xs">
-                    {item.artist}
-                  </Badge>
-                  <h3 className="text-white text-lg font-semibold mb-1">{item.title}</h3>
-                  <p className="text-white/80 text-sm line-clamp-2">{item.description}</p>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {filteredItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="grid md:grid-cols-2 gap-8 items-center cursor-pointer group"
+                  onClick={() => setSelectedVideo(index)}
+                >
+                  <div className="aspect-video bg-gray-200 overflow-hidden">
+                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover:bg-gray-300 transition-colors duration-300">
+                      <div className="bg-white/90 rounded-full p-4 group-hover:bg-white transition-colors">
+                        <Play className="h-8 w-8 text-black" />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">{item.artist}</p>
+                    <h3 className="text-2xl font-light mb-4">{item.title}</h3>
+                    <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Video Modal */}
       {selectedVideo !== null && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-white flex items-center justify-center p-6">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 z-10"
+            className="absolute top-6 right-6 z-10 hover:bg-gray-100"
             onClick={() => setSelectedVideo(null)}
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </Button>
           
-          <div className="max-w-3xl w-full">
-            <div className="aspect-[9/16] bg-muted rounded-lg overflow-hidden mb-4 flex items-center justify-center">
-              <div className="bg-background/80 rounded-full p-6">
-                <Play className="h-12 w-12 text-foreground" />
+          <div className="max-w-4xl w-full">
+            <div className="aspect-video bg-gray-200 mb-8 overflow-hidden">
+              <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                <div className="bg-white/90 rounded-full p-6">
+                  <Play className="h-12 w-12 text-black" />
+                </div>
               </div>
             </div>
             
-            <div className="text-center text-white">
-              <Badge variant="secondary" className="mb-2">
-                {filteredItems[selectedVideo]?.artist}
-              </Badge>
-              <h3 className="text-2xl font-bold mb-2">{filteredItems[selectedVideo]?.title}</h3>
-              <p className="text-lg text-white/80">{filteredItems[selectedVideo]?.description}</p>
+            <div className="text-center">
+              <p className="text-sm text-gray-500 mb-2">{filteredItems[selectedVideo]?.artist}</p>
+              <h3 className="text-3xl font-light mb-4">{filteredItems[selectedVideo]?.title}</h3>
+              <p className="text-lg text-gray-600">{filteredItems[selectedVideo]?.description}</p>
             </div>
           </div>
         </div>
