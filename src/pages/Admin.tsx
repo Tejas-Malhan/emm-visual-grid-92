@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,125 +16,106 @@ const Admin = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
-  // States for posts
-  const [posts, setPosts] = useState([]);
-  const [newPost, setNewPost] = useState({ 
-    instagram_url: "", 
-    title: "", 
-    description: "", 
-    post_type: "photo" 
+  // States for media items
+  const [mediaItems, setMediaItems] = useState([]);
+  const [newMediaItem, setNewMediaItem] = useState({ 
+    cover_url: "", 
+    type: "photo",
+    description: "",
+    media_urls: [""],
+    credits: [""]
   });
 
-  // States for members
-  const [members, setMembers] = useState([]);
-  const [newMember, setNewMember] = useState({ 
-    email: "", 
+  // States for users
+  const [users, setUsers] = useState([]);
+  const [newUser, setNewUser] = useState({ 
+    username: "", 
     password: "", 
-    full_name: "" 
+    default_credit_name: "",
+    role: "member"
   });
 
   // Loading states
-  const [isCreatingMember, setIsCreatingMember] = useState(false);
-  const [isAddingPost, setIsAddingPost] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [isAddingMediaItem, setIsAddingMediaItem] = useState(false);
 
-  const loadPosts = async () => {
+  const loadMediaItems = async () => {
     const { data, error } = await supabase
-      .from('posts')
+      .from('media_items')
       .select('*')
       .order('created_at', { ascending: false });
     
     if (error) {
-      console.error('Error loading posts:', error);
+      console.error('Error loading media items:', error);
     } else {
-      setPosts(data || []);
+      setMediaItems(data || []);
     }
   };
 
-  const loadMembers = async () => {
+  const loadUsers = async () => {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .order('created_at', { ascending: false });
     
     if (error) {
-      console.error('Error loading members:', error);
+      console.error('Error loading users:', error);
     } else {
-      setMembers(data || []);
+      setUsers(data || []);
     }
   };
 
-  const createExamplePost = async () => {
+  const createExampleMediaItem = async () => {
     if (user) {
       try {
-        const examplePost = {
-          instagram_url: "https://www.instagram.com/p/ABC123/",
-          title: "Beautiful Sunset Photography",
-          description: "Captured this amazing sunset during our latest photo shoot. The golden hour lighting was absolutely perfect for this portrait session.",
-          post_type: "photo",
-          user_id: user.id,
-          instagram_media_urls: ["https://www.instagram.com/p/ABC123/media/?size=l"]
+        const exampleItem = {
+          type: "photo",
+          cover_url: "https://via.placeholder.com/400x300",
+          media_urls: ["https://via.placeholder.com/400x300", "https://via.placeholder.com/400x300"],
+          description: "Example photo set from a recent shoot",
+          uploaded_by_user_id: user.id,
+          credits: ["John Doe", "Jane Smith"]
         };
 
-        const { error } = await supabase.from('posts').insert([examplePost]);
+        const { error } = await supabase.from('media_items').insert([exampleItem]);
 
         if (error) {
-          console.error('Error creating example post:', error);
+          console.error('Error creating example media item:', error);
         } else {
-          console.log('Example post created successfully');
-          loadPosts();
+          console.log('Example media item created successfully');
+          loadMediaItems();
         }
       } catch (error) {
-        console.error('Error creating example post:', error);
+        console.error('Error creating example media item:', error);
       }
     }
   };
 
   useEffect(() => {
-    loadPosts();
-    loadMembers();
+    loadMediaItems();
+    loadUsers();
     
-    // Create example post if no posts exist
+    // Create example media item if no items exist
     const checkAndCreateExample = async () => {
-      const { data } = await supabase.from('posts').select('id').limit(1);
+      const { data } = await supabase.from('media_items').select('id').limit(1);
       if (data && data.length === 0) {
-        createExamplePost();
+        createExampleMediaItem();
       }
     };
     
     checkAndCreateExample();
   }, []);
 
-  // Extract Instagram media URLs from the post URL
-  const extractInstagramMedia = (instagramUrl: string) => {
-    try {
-      // Simple extraction - in a real app, you'd use Instagram's API
-      // For now, we'll just store the URL and create a placeholder media URL
-      const postId = instagramUrl.split('/p/')[1]?.split('/')[0] || 
-                    instagramUrl.split('/reel/')[1]?.split('/')[0];
-      
-      if (postId) {
-        // This is a simplified approach - in production you'd use Instagram Basic Display API
-        return [`https://www.instagram.com/p/${postId}/media/?size=l`];
-      }
-      return [];
-    } catch (error) {
-      console.error('Error extracting Instagram media:', error);
-      return [];
-    }
-  };
-
-  const addPost = async () => {
-    if (newPost.instagram_url && newPost.title && user) {
-      setIsAddingPost(true);
+  const addMediaItem = async () => {
+    if (newMediaItem.cover_url && user) {
+      setIsAddingMediaItem(true);
       
       try {
-        // Extract media URLs from Instagram URL
-        const mediaUrls = extractInstagramMedia(newPost.instagram_url);
-        
-        const { error } = await supabase.from('posts').insert([{
-          ...newPost,
-          user_id: user.id,
-          instagram_media_urls: mediaUrls,
+        const { error } = await supabase.from('media_items').insert([{
+          ...newMediaItem,
+          uploaded_by_user_id: user.id,
+          media_urls: newMediaItem.media_urls.filter(url => url.trim() !== ""),
+          credits: newMediaItem.credits.filter(credit => credit.trim() !== "")
         }]);
 
         if (error) {
@@ -142,108 +124,130 @@ const Admin = () => {
 
         toast({
           title: "Success",
-          description: "Post added successfully",
+          description: "Media item added successfully",
         });
-        setNewPost({ instagram_url: "", title: "", description: "", post_type: "photo" });
-        loadPosts();
+        setNewMediaItem({ 
+          cover_url: "", 
+          type: "photo",
+          description: "",
+          media_urls: [""],
+          credits: [""]
+        });
+        loadMediaItems();
       } catch (error) {
-        console.error('Error adding post:', error);
+        console.error('Error adding media item:', error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to add post",
+          description: "Failed to add media item",
         });
       } finally {
-        setIsAddingPost(false);
+        setIsAddingMediaItem(false);
       }
     }
   };
 
-  const createMember = async () => {
-    if (newMember.email && newMember.password) {
-      setIsCreatingMember(true);
+  const createUser = async () => {
+    if (newUser.username && newUser.password) {
+      setIsCreatingUser(true);
       
       try {
-        // Create user account with proper error handling
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: newMember.email,
-          password: newMember.password,
-          email_confirm: true,
-        });
-
-        if (authError) {
-          throw new Error(authError.message);
-        }
-
-        if (!authData.user) {
-          throw new Error('Failed to create user account');
-        }
-
-        // Wait a moment to ensure the user is fully created in auth.users
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Create profile with proper error handling
-        const { error: profileError } = await supabase.from('profiles').insert([{
-          user_id: authData.user.id,
-          email: newMember.email,
-          full_name: newMember.full_name || null,
-          role: 'member',
+        // Hash password (in production, use proper password hashing)
+        const passwordHash = `$2b$10$${newUser.password}_placeholder_hash`;
+        
+        const { error } = await supabase.from('users').insert([{
+          username: newUser.username,
+          password_hash: passwordHash,
+          default_credit_name: newUser.default_credit_name || null,
+          role: newUser.role,
         }]);
 
-        if (profileError) {
-          // If profile creation fails, we should clean up the auth user
-          console.error('Profile creation failed:', profileError);
-          
-          // Try to delete the created auth user
-          try {
-            await supabase.auth.admin.deleteUser(authData.user.id);
-          } catch (cleanupError) {
-            console.error('Failed to cleanup auth user:', cleanupError);
-          }
-          
-          throw new Error(`Failed to create member profile: ${profileError.message}`);
+        if (error) {
+          throw new Error(`Failed to create user: ${error.message}`);
         }
 
         toast({
           title: "Success",
-          description: "Member account created successfully",
+          description: "User account created successfully",
         });
-        setNewMember({ email: "", password: "", full_name: "" });
-        loadMembers();
+        setNewUser({ username: "", password: "", default_credit_name: "", role: "member" });
+        loadUsers();
         
       } catch (error) {
-        console.error('Error creating member:', error);
+        console.error('Error creating user:', error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to create member account",
+          description: error instanceof Error ? error.message : "Failed to create user account",
         });
       } finally {
-        setIsCreatingMember(false);
+        setIsCreatingUser(false);
       }
     }
   };
 
-  const deletePost = async (id: string) => {
-    const { error } = await supabase.from('posts').delete().eq('id', id);
+  const deleteMediaItem = async (id: string) => {
+    const { error } = await supabase.from('media_items').delete().eq('id', id);
     
     if (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete post",
+        description: "Failed to delete media item",
       });
     } else {
       toast({
         title: "Success",
-        description: "Post deleted successfully",
+        description: "Media item deleted successfully",
       });
-      loadPosts();
+      loadMediaItems();
     }
   };
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const addMediaUrl = () => {
+    setNewMediaItem(prev => ({
+      ...prev,
+      media_urls: [...prev.media_urls, ""]
+    }));
+  };
+
+  const updateMediaUrl = (index: number, value: string) => {
+    setNewMediaItem(prev => ({
+      ...prev,
+      media_urls: prev.media_urls.map((url, i) => i === index ? value : url)
+    }));
+  };
+
+  const removeMediaUrl = (index: number) => {
+    setNewMediaItem(prev => ({
+      ...prev,
+      media_urls: prev.media_urls.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addCredit = () => {
+    setNewMediaItem(prev => ({
+      ...prev,
+      credits: [...prev.credits, ""]
+    }));
+  };
+
+  const updateCredit = (index: number, value: string) => {
+    setNewMediaItem(prev => ({
+      ...prev,
+      credits: prev.credits.map((credit, i) => i === index ? value : credit)
+    }));
+  };
+
+  const removeCredit = (index: number) => {
+    setNewMediaItem(prev => ({
+      ...prev,
+      credits: prev.credits.filter((_, i) => i !== index)
+    }));
   };
 
   return (
@@ -268,84 +272,126 @@ const Admin = () => {
         <div className="text-center mb-16">
           <h1 className="text-6xl font-light tracking-tight mb-6">Admin Panel</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Manage your content and team members
+            Manage your media content and team members
           </p>
         </div>
 
-        <Tabs defaultValue="posts" className="w-full">
+        <Tabs defaultValue="media" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="posts">Instagram Posts</TabsTrigger>
-            <TabsTrigger value="members">Members</TabsTrigger>
+            <TabsTrigger value="media">Media Items</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="posts" className="space-y-8">
+          <TabsContent value="media" className="space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Plus className="h-5 w-5" />
-                  Add New Instagram Post
+                  Add New Media Item
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Input
-                  placeholder="Instagram URL (e.g., https://www.instagram.com/p/ABC123/)"
-                  value={newPost.instagram_url}
-                  onChange={(e) => setNewPost({ ...newPost, instagram_url: e.target.value })}
-                />
-                <Input
-                  placeholder="Post title"
-                  value={newPost.title}
-                  onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                />
-                <Textarea
-                  placeholder="Description"
-                  value={newPost.description}
-                  onChange={(e) => setNewPost({ ...newPost, description: e.target.value })}
+                  placeholder="Cover URL"
+                  value={newMediaItem.cover_url}
+                  onChange={(e) => setNewMediaItem({ ...newMediaItem, cover_url: e.target.value })}
                 />
                 <select
                   className="w-full p-2 border rounded-md"
-                  value={newPost.post_type}
-                  onChange={(e) => setNewPost({ ...newPost, post_type: e.target.value })}
+                  value={newMediaItem.type}
+                  onChange={(e) => setNewMediaItem({ ...newMediaItem, type: e.target.value })}
                 >
                   <option value="photo">Photo</option>
-                  <option value="reel">Reel</option>
+                  <option value="video">Video</option>
                 </select>
+                <Textarea
+                  placeholder="Description (max 200 characters)"
+                  value={newMediaItem.description}
+                  maxLength={200}
+                  onChange={(e) => setNewMediaItem({ ...newMediaItem, description: e.target.value })}
+                />
+                
+                <div>
+                  <label className="text-sm font-medium">Media URLs:</label>
+                  {newMediaItem.media_urls.map((url, index) => (
+                    <div key={index} className="flex gap-2 mt-2">
+                      <Input
+                        placeholder="Media URL"
+                        value={url}
+                        onChange={(e) => updateMediaUrl(index, e.target.value)}
+                      />
+                      {newMediaItem.media_urls.length > 1 && (
+                        <Button type="button" variant="outline" onClick={() => removeMediaUrl(index)}>
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={addMediaUrl} className="mt-2">
+                    Add Media URL
+                  </Button>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Credits:</label>
+                  {newMediaItem.credits.map((credit, index) => (
+                    <div key={index} className="flex gap-2 mt-2">
+                      <Input
+                        placeholder="Credit name"
+                        value={credit}
+                        onChange={(e) => updateCredit(index, e.target.value)}
+                      />
+                      {newMediaItem.credits.length > 1 && (
+                        <Button type="button" variant="outline" onClick={() => removeCredit(index)}>
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={addCredit} className="mt-2">
+                    Add Credit
+                  </Button>
+                </div>
+
                 <Button 
-                  onClick={addPost} 
+                  onClick={addMediaItem} 
                   className="bg-black text-white hover:bg-gray-800"
-                  disabled={isAddingPost}
+                  disabled={isAddingMediaItem}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isAddingPost ? "Adding..." : "Add Post"}
+                  {isAddingMediaItem ? "Adding..." : "Add Media Item"}
                 </Button>
               </CardContent>
             </Card>
 
             <div className="grid gap-4">
-              {posts.map((post: any) => (
-                <Card key={post.id}>
+              {mediaItems.map((item: any) => (
+                <Card key={item.id}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold mb-2">{post.title}</h3>
-                        <p className="text-gray-600 mb-1">Type: {post.post_type}</p>
-                        <p className="text-gray-500 mb-2">{post.description}</p>
-                        <a 
-                          href={post.instagram_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-sm mb-2 block"
-                        >
-                          View on Instagram
-                        </a>
-                        {post.instagram_media_urls && post.instagram_media_urls.length > 0 && (
+                        <h3 className="text-xl font-semibold mb-2">
+                          {item.type.charAt(0).toUpperCase() + item.type.slice(1)} Item
+                        </h3>
+                        <p className="text-gray-500 mb-2">{item.description}</p>
+                        <p className="text-sm text-gray-400 mb-2">Cover: {item.cover_url}</p>
+                        {item.media_urls && item.media_urls.length > 0 && (
                           <div className="mt-2">
-                            <p className="text-sm text-gray-500 mb-1">Media URLs:</p>
+                            <p className="text-sm text-gray-500 mb-1">Media URLs ({item.media_urls.length}):</p>
                             <div className="text-xs text-gray-400">
-                              {post.instagram_media_urls.map((url: string, index: number) => (
+                              {item.media_urls.slice(0, 2).map((url: string, index: number) => (
                                 <div key={index} className="truncate">{url}</div>
                               ))}
+                              {item.media_urls.length > 2 && (
+                                <div>... and {item.media_urls.length - 2} more</div>
+                              )}
                             </div>
+                          </div>
+                        )}
+                        {item.credits && item.credits.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-500 mb-1">Credits:</p>
+                            <p className="text-sm text-gray-400">{item.credits.join(', ')}</p>
                           </div>
                         )}
                       </div>
@@ -356,7 +402,7 @@ const Admin = () => {
                         <Button 
                           variant="destructive" 
                           size="sm" 
-                          onClick={() => deletePost(post.id)}
+                          onClick={() => deleteMediaItem(item.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -368,54 +414,61 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="members" className="space-y-8">
+          <TabsContent value="users" className="space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Create New Member Account
+                  Create New User Account
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Input
-                  placeholder="Email"
-                  type="email"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                  placeholder="Username"
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                 />
                 <Input
                   placeholder="Password (minimum 6 characters)"
                   type="password"
-                  value={newMember.password}
-                  onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                 />
                 <Input
-                  placeholder="Full Name (optional)"
-                  value={newMember.full_name}
-                  onChange={(e) => setNewMember({ ...newMember, full_name: e.target.value })}
+                  placeholder="Default Credit Name (optional)"
+                  value={newUser.default_credit_name}
+                  onChange={(e) => setNewUser({ ...newUser, default_credit_name: e.target.value })}
                 />
+                <select
+                  className="w-full p-2 border rounded-md"
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                >
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
                 <Button 
-                  onClick={createMember} 
+                  onClick={createUser} 
                   className="bg-black text-white hover:bg-gray-800"
-                  disabled={isCreatingMember}
+                  disabled={isCreatingUser}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isCreatingMember ? "Creating..." : "Create Member"}
+                  {isCreatingUser ? "Creating..." : "Create User"}
                 </Button>
               </CardContent>
             </Card>
 
             <div className="grid gap-4">
-              {members.map((member: any) => (
-                <Card key={member.id}>
+              {users.map((user: any) => (
+                <Card key={user.id}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="text-xl font-semibold mb-2">{member.full_name || 'No name'}</h3>
-                        <p className="text-gray-600 mb-1">{member.email}</p>
-                        <p className="text-gray-500">Role: {member.role}</p>
+                        <h3 className="text-xl font-semibold mb-2">{user.username}</h3>
+                        <p className="text-gray-600 mb-1">Default Credit: {user.default_credit_name || 'Not set'}</p>
+                        <p className="text-gray-500">Role: {user.role}</p>
                         <p className="text-xs text-gray-400 mt-1">
-                          Created: {new Date(member.created_at).toLocaleDateString()}
+                          Created: {new Date(user.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex gap-2">

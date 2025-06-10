@@ -9,16 +9,92 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      media_items: {
+        Row: {
+          cover_url: string
+          created_at: string | null
+          credits: string[] | null
+          description: string | null
+          id: string
+          media_urls: string[] | null
+          type: string
+          updated_at: string | null
+          uploaded_by_user_id: string
+        }
+        Insert: {
+          cover_url: string
+          created_at?: string | null
+          credits?: string[] | null
+          description?: string | null
+          id?: string
+          media_urls?: string[] | null
+          type: string
+          updated_at?: string | null
+          uploaded_by_user_id: string
+        }
+        Update: {
+          cover_url?: string
+          created_at?: string | null
+          credits?: string[] | null
+          description?: string | null
+          id?: string
+          media_urls?: string[] | null
+          type?: string
+          updated_at?: string | null
+          uploaded_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_items_uploaded_by_user_id_fkey"
+            columns: ["uploaded_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          default_credit_name: string | null
+          id: string
+          password_hash: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          default_credit_name?: string | null
+          id?: string
+          password_hash: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          default_credit_name?: string | null
+          id?: string
+          password_hash?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +209,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["admin", "member"],
+    },
   },
 } as const
