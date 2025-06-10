@@ -33,6 +33,10 @@ const Admin = () => {
     full_name: "" 
   });
 
+  // Loading states
+  const [isCreatingMember, setIsCreatingMember] = useState(false);
+  const [isAddingPost, setIsAddingPost] = useState(false);
+
   const loadPosts = async () => {
     const { data, error } = await supabase
       .from('posts')
@@ -64,34 +68,68 @@ const Admin = () => {
     loadMembers();
   }, []);
 
+  // Extract Instagram media URLs from the post URL
+  const extractInstagramMedia = (instagramUrl: string) => {
+    try {
+      // Simple extraction - in a real app, you'd use Instagram's API
+      // For now, we'll just store the URL and create a placeholder media URL
+      const postId = instagramUrl.split('/p/')[1]?.split('/')[0] || 
+                    instagramUrl.split('/reel/')[1]?.split('/')[0];
+      
+      if (postId) {
+        // This is a simplified approach - in production you'd use Instagram Basic Display API
+        return [`https://www.instagram.com/p/${postId}/media/?size=l`];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error extracting Instagram media:', error);
+      return [];
+    }
+  };
+
   const addPost = async () => {
     if (newPost.instagram_url && newPost.title && user) {
-      const { error } = await supabase.from('posts').insert([{
-        ...newPost,
-        user_id: user.id,
-      }]);
+      setIsAddingPost(true);
+      
+      try {
+        // Extract media URLs from Instagram URL
+        const mediaUrls = extractInstagramMedia(newPost.instagram_url);
+        
+        const { error } = await supabase.from('posts').insert([{
+          ...newPost,
+          user_id: user.id,
+          instagram_media_urls: mediaUrls,
+        }]);
 
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to add post",
-        });
-      } else {
+        if (error) {
+          throw error;
+        }
+
         toast({
           title: "Success",
           description: "Post added successfully",
         });
         setNewPost({ instagram_url: "", title: "", description: "", post_type: "photo" });
         loadPosts();
+      } catch (error) {
+        console.error('Error adding post:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to add post",
+        });
+      } finally {
+        setIsAddingPost(false);
       }
     }
   };
 
   const createMember = async () => {
     if (newMember.email && newMember.password) {
+      setIsCreatingMember(true);
+      
       try {
-        // Create user account
+        // Create user account with proper error handling
         const { data: authData, error: authError } = await supabase.auth.admin.createUser({
           email: newMember.email,
           password: newMember.password,
@@ -99,42 +137,54 @@ const Admin = () => {
         });
 
         if (authError) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: authError.message,
-          });
-          return;
+          throw new Error(authError.message);
         }
 
-        // Create profile
+        if (!authData.user) {
+          throw new Error('Failed to create user account');
+        }
+
+        // Wait a moment to ensure the user is fully created in auth.users
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Create profile with proper error handling
         const { error: profileError } = await supabase.from('profiles').insert([{
           user_id: authData.user.id,
           email: newMember.email,
-          full_name: newMember.full_name,
+          full_name: newMember.full_name || null,
           role: 'member',
         }]);
 
         if (profileError) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to create member profile",
-          });
-        } else {
-          toast({
-            title: "Success",
-            description: "Member account created successfully",
-          });
-          setNewMember({ email: "", password: "", full_name: "" });
-          loadMembers();
+          // If profile creation fails, we should clean up the auth user
+          console.error('Profile creation failed:', profileError);
+          
+          // Try to delete the created auth user
+          try {
+            await supabase.auth.admin.deleteUser(authData.user.id);
+          } catch (cleanupError) {
+            console.error('Failed to cleanup auth user:', cleanupError);
+          }
+          
+          throw new Error(`Failed to create member profile: ${profileError.message}`);
         }
+
+        toast({
+          title: "Success",
+          description: "Member account created successfully",
+        });
+        setNewMember({ email: "", password: "", full_name: "" });
+        loadMembers();
+        
       } catch (error) {
+        console.error('Error creating member:', error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to create member account",
+          description: error instanceof Error ? error.message : "Failed to create member account",
         });
+      } finally {
+        setIsCreatingMember(false);
       }
     }
   };
@@ -203,7 +253,7 @@ const Admin = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <Input
-                  placeholder="Instagram URL"
+                  placeholder="Instagram URL (e.g., https://www.instagram.com/p/ABC123/)"
                   value={newPost.instagram_url}
                   onChange={(e) => setNewPost({ ...newPost, instagram_url: e.target.value })}
                 />
@@ -225,9 +275,13 @@ const Admin = () => {
                   <option value="photo">Photo</option>
                   <option value="reel">Reel</option>
                 </select>
-                <Button onClick={addPost} className="bg-black text-white hover:bg-gray-800">
+                <Button 
+                  onClick={addPost} 
+                  className="bg-black text-white hover:bg-gray-800"
+                  disabled={isAddingPost}
+                >
                   <Save className="h-4 w-4 mr-2" />
-                  Add Post
+                  {isAddingPost ? "Adding..." : "Add Post"}
                 </Button>
               </CardContent>
             </Card>
@@ -237,7 +291,7 @@ const Admin = () => {
                 <Card key={post.id}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-xl font-semibold mb-2">{post.title}</h3>
                         <p className="text-gray-600 mb-1">Type: {post.post_type}</p>
                         <p className="text-gray-500 mb-2">{post.description}</p>
@@ -245,12 +299,22 @@ const Admin = () => {
                           href={post.instagram_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-sm"
+                          className="text-blue-600 hover:underline text-sm mb-2 block"
                         >
                           View on Instagram
                         </a>
+                        {post.instagram_media_urls && post.instagram_media_urls.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-500 mb-1">Media URLs:</p>
+                            <div className="text-xs text-gray-400">
+                              {post.instagram_media_urls.map((url: string, index: number) => (
+                                <div key={index} className="truncate">{url}</div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 ml-4">
                         <Button variant="outline" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -285,19 +349,23 @@ const Admin = () => {
                   onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
                 />
                 <Input
-                  placeholder="Password"
+                  placeholder="Password (minimum 6 characters)"
                   type="password"
                   value={newMember.password}
                   onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
                 />
                 <Input
-                  placeholder="Full Name"
+                  placeholder="Full Name (optional)"
                   value={newMember.full_name}
                   onChange={(e) => setNewMember({ ...newMember, full_name: e.target.value })}
                 />
-                <Button onClick={createMember} className="bg-black text-white hover:bg-gray-800">
+                <Button 
+                  onClick={createMember} 
+                  className="bg-black text-white hover:bg-gray-800"
+                  disabled={isCreatingMember}
+                >
                   <Save className="h-4 w-4 mr-2" />
-                  Create Member
+                  {isCreatingMember ? "Creating..." : "Create Member"}
                 </Button>
               </CardContent>
             </Card>
@@ -311,6 +379,9 @@ const Admin = () => {
                         <h3 className="text-xl font-semibold mb-2">{member.full_name || 'No name'}</h3>
                         <p className="text-gray-600 mb-1">{member.email}</p>
                         <p className="text-gray-500">Role: {member.role}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Created: {new Date(member.created_at).toLocaleDateString()}
+                        </p>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
