@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +31,7 @@ const Admin = () => {
     username: "", 
     password: "", 
     default_credit_name: "",
-    role: "member"
+    role: "member" as "admin" | "member"
   });
 
   // Loading states
@@ -155,12 +154,12 @@ const Admin = () => {
         // Hash password (in production, use proper password hashing)
         const passwordHash = `$2b$10$${newUser.password}_placeholder_hash`;
         
-        const { error } = await supabase.from('users').insert([{
+        const { error } = await supabase.from('users').insert({
           username: newUser.username,
           password_hash: passwordHash,
           default_credit_name: newUser.default_credit_name || null,
           role: newUser.role,
-        }]);
+        });
 
         if (error) {
           throw new Error(`Failed to create user: ${error.message}`);
@@ -442,7 +441,7 @@ const Admin = () => {
                 <select
                   className="w-full p-2 border rounded-md"
                   value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as "admin" | "member" })}
                 >
                   <option value="member">Member</option>
                   <option value="admin">Admin</option>
