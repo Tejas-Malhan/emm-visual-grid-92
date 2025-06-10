@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Camera, Video, Users, Mail, Instagram, Twitter } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -28,6 +27,9 @@ const Index = () => {
               </Link>
               <Link to="/contact" className="text-gray-700 hover:text-black transition-colors font-medium">
                 Contact
+              </Link>
+              <Link to="/admin" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Admin
               </Link>
             </div>
             <Button variant="outline" size="sm" className="md:hidden border-gray-300">

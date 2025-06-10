@@ -6,7 +6,6 @@ import { Link } from "react-router-dom";
 
 const Videos = () => {
   const [selectedVideo, setSelectedVideo] = useState<number | null>(null);
-  const [filter, setFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Mock data for video items
@@ -19,23 +18,35 @@ const Videos = () => {
     { id: 6, artist: "Maya", title: "Event Highlights", description: "Corporate event coverage", category: "event" },
   ];
 
-  const filters = ["all", "Emma", "Marcus", "Maya", "cinematic", "music", "wedding", "commercial", "documentary", "event"];
-
-  const filteredItems = videoItems.filter(item => 
-    filter === "all" || item.artist === filter || item.category === filter
-  );
-
   return (
     <div className="min-h-screen bg-white text-black">
       {/* Navigation */}
       <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center text-lg font-medium">
-              <ArrowLeft className="mr-3 h-5 w-5" />
-              Back
+            <Link to="/" className="text-2xl font-bold tracking-tight">
+              EMM
             </Link>
-            <h1 className="text-2xl font-light tracking-tight">Videos</h1>
+            <div className="hidden md:flex items-center space-x-8">
+              <Link to="/gallery" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Gallery
+              </Link>
+              <Link to="/videos" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Videos
+              </Link>
+              <Link to="/about" className="text-gray-700 hover:text-black transition-colors font-medium">
+                About
+              </Link>
+              <Link to="/members" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Members
+              </Link>
+              <Link to="/contact" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Contact
+              </Link>
+              <Link to="/admin" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Admin
+              </Link>
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 variant={viewMode === "grid" ? "default" : "ghost"}
@@ -58,70 +69,55 @@ const Videos = () => {
         </div>
       </nav>
 
-      {/* Filters */}
-      <section className="py-8 px-6 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap gap-2">
-            {filters.map((filterOption) => (
-              <Button
-                key={filterOption}
-                variant={filter === filterOption ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setFilter(filterOption)}
-                className={filter === filterOption ? "bg-black text-white" : "text-gray-600 hover:text-black hover:bg-gray-50"}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="text-center mb-16">
+          <h1 className="text-6xl font-light tracking-tight mb-6">Videos</h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Moving stories captured in cinematic detail
+          </p>
+        </div>
+
+        {viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {videoItems.map((item, index) => (
+              <div
+                key={item.id}
+                className="aspect-video bg-gray-200 overflow-hidden group cursor-pointer"
+                onClick={() => setSelectedVideo(index)}
               >
-                {filterOption === "all" ? "All Videos" : filterOption}
-              </Button>
+                <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover:bg-gray-300 transition-colors duration-300">
+                  <div className="bg-white/90 rounded-full p-4 group-hover:bg-white transition-colors">
+                    <Play className="h-8 w-8 text-black" />
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Video Grid */}
-      <section className="py-12 px-6">
-        <div className="max-w-7xl mx-auto">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="aspect-video bg-gray-200 overflow-hidden group cursor-pointer"
-                  onClick={() => setSelectedVideo(index)}
-                >
+        ) : (
+          <div className="space-y-8">
+            {videoItems.map((item, index) => (
+              <div
+                key={item.id}
+                className="grid md:grid-cols-2 gap-8 items-center cursor-pointer group"
+                onClick={() => setSelectedVideo(index)}
+              >
+                <div className="aspect-video bg-gray-200 overflow-hidden">
                   <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover:bg-gray-300 transition-colors duration-300">
                     <div className="bg-white/90 rounded-full p-4 group-hover:bg-white transition-colors">
                       <Play className="h-8 w-8 text-black" />
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {filteredItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="grid md:grid-cols-2 gap-8 items-center cursor-pointer group"
-                  onClick={() => setSelectedVideo(index)}
-                >
-                  <div className="aspect-video bg-gray-200 overflow-hidden">
-                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover:bg-gray-300 transition-colors duration-300">
-                      <div className="bg-white/90 rounded-full p-4 group-hover:bg-white transition-colors">
-                        <Play className="h-8 w-8 text-black" />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">{item.artist}</p>
-                    <h3 className="text-2xl font-light mb-4">{item.title}</h3>
-                    <p className="text-gray-600 leading-relaxed">{item.description}</p>
-                  </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">{item.artist}</p>
+                  <h3 className="text-2xl font-light mb-4">{item.title}</h3>
+                  <p className="text-gray-600 leading-relaxed">{item.description}</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Video Modal */}
       {selectedVideo !== null && (
@@ -145,9 +141,9 @@ const Videos = () => {
             </div>
             
             <div className="text-center">
-              <p className="text-sm text-gray-500 mb-2">{filteredItems[selectedVideo]?.artist}</p>
-              <h3 className="text-3xl font-light mb-4">{filteredItems[selectedVideo]?.title}</h3>
-              <p className="text-lg text-gray-600">{filteredItems[selectedVideo]?.description}</p>
+              <p className="text-sm text-gray-500 mb-2">{videoItems[selectedVideo]?.artist}</p>
+              <h3 className="text-3xl font-light mb-4">{videoItems[selectedVideo]?.title}</h3>
+              <p className="text-lg text-gray-600">{videoItems[selectedVideo]?.description}</p>
             </div>
           </div>
         </div>

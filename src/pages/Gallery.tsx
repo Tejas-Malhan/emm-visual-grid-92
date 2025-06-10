@@ -6,7 +6,6 @@ import { Link } from "react-router-dom";
 
 const Gallery = () => {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
-  const [filter, setFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Mock data for gallery items
@@ -22,23 +21,35 @@ const Gallery = () => {
     { id: 9, artist: "Maya", title: "Wedding Day", description: "Intimate celebration", category: "event" },
   ];
 
-  const filters = ["all", "Emma", "Marcus", "Maya", "landscape", "street", "portrait", "architecture", "event", "fashion", "nature", "documentary"];
-
-  const filteredItems = galleryItems.filter(item => 
-    filter === "all" || item.artist === filter || item.category === filter
-  );
-
   return (
     <div className="min-h-screen bg-white text-black">
       {/* Navigation */}
       <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center text-lg font-medium">
-              <ArrowLeft className="mr-3 h-5 w-5" />
-              Back
+            <Link to="/" className="text-2xl font-bold tracking-tight">
+              EMM
             </Link>
-            <h1 className="text-2xl font-light tracking-tight">Gallery</h1>
+            <div className="hidden md:flex items-center space-x-8">
+              <Link to="/gallery" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Gallery
+              </Link>
+              <Link to="/videos" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Videos
+              </Link>
+              <Link to="/about" className="text-gray-700 hover:text-black transition-colors font-medium">
+                About
+              </Link>
+              <Link to="/members" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Members
+              </Link>
+              <Link to="/contact" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Contact
+              </Link>
+              <Link to="/admin" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Admin
+              </Link>
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 variant={viewMode === "grid" ? "default" : "ghost"}
@@ -61,67 +72,52 @@ const Gallery = () => {
         </div>
       </nav>
 
-      {/* Filters */}
-      <section className="py-8 px-6 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap gap-2">
-            {filters.map((filterOption) => (
-              <Button
-                key={filterOption}
-                variant={filter === filterOption ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setFilter(filterOption)}
-                className={filter === filterOption ? "bg-black text-white" : "text-gray-600 hover:text-black hover:bg-gray-50"}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="text-center mb-16">
+          <h1 className="text-6xl font-light tracking-tight mb-6">Gallery</h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            A collection of visual stories captured through our lens
+          </p>
+        </div>
+
+        {viewMode === "grid" ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {galleryItems.map((item, index) => (
+              <div
+                key={item.id}
+                className="aspect-[4/5] bg-gray-200 overflow-hidden group cursor-pointer"
+                onClick={() => setSelectedImage(index)}
               >
-                {filterOption === "all" ? "All Work" : filterOption}
-              </Button>
+                <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover:bg-gray-300 transition-colors duration-300">
+                  <Camera className="h-8 w-8 text-gray-400" />
+                </div>
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300"></div>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Gallery Grid */}
-      <section className="py-12 px-6">
-        <div className="max-w-7xl mx-auto">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="aspect-[4/5] bg-gray-200 overflow-hidden group cursor-pointer"
-                  onClick={() => setSelectedImage(index)}
-                >
+        ) : (
+          <div className="space-y-8">
+            {galleryItems.map((item, index) => (
+              <div
+                key={item.id}
+                className="grid md:grid-cols-2 gap-8 items-center cursor-pointer group"
+                onClick={() => setSelectedImage(index)}
+              >
+                <div className="aspect-[4/3] bg-gray-200 overflow-hidden">
                   <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover:bg-gray-300 transition-colors duration-300">
-                    <Camera className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300"></div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {filteredItems.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="grid md:grid-cols-2 gap-8 items-center cursor-pointer group"
-                  onClick={() => setSelectedImage(index)}
-                >
-                  <div className="aspect-[4/3] bg-gray-200 overflow-hidden">
-                    <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center group-hover:bg-gray-300 transition-colors duration-300">
-                      <Camera className="h-12 w-12 text-gray-400" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">{item.artist}</p>
-                    <h3 className="text-2xl font-light mb-4">{item.title}</h3>
-                    <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                    <Camera className="h-12 w-12 text-gray-400" />
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">{item.artist}</p>
+                  <h3 className="text-2xl font-light mb-4">{item.title}</h3>
+                  <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Lightbox Modal */}
       {selectedImage !== null && (
@@ -143,9 +139,9 @@ const Gallery = () => {
             </div>
             
             <div className="text-center">
-              <p className="text-sm text-gray-500 mb-2">{filteredItems[selectedImage]?.artist}</p>
-              <h3 className="text-3xl font-light mb-4">{filteredItems[selectedImage]?.title}</h3>
-              <p className="text-lg text-gray-600">{filteredItems[selectedImage]?.description}</p>
+              <p className="text-sm text-gray-500 mb-2">{galleryItems[selectedImage]?.artist}</p>
+              <h3 className="text-3xl font-light mb-4">{galleryItems[selectedImage]?.title}</h3>
+              <p className="text-lg text-gray-600">{galleryItems[selectedImage]?.description}</p>
             </div>
           </div>
         </div>

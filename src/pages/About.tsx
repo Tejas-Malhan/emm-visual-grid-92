@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Camera, Video, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -10,11 +9,29 @@ const About = () => {
       <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center text-lg font-medium">
-              <ArrowLeft className="mr-3 h-5 w-5" />
-              Back
+            <Link to="/" className="text-2xl font-bold tracking-tight">
+              EMM
             </Link>
-            <h1 className="text-2xl font-light tracking-tight">About</h1>
+            <div className="hidden md:flex items-center space-x-8">
+              <Link to="/gallery" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Gallery
+              </Link>
+              <Link to="/videos" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Videos
+              </Link>
+              <Link to="/about" className="text-gray-700 hover:text-black transition-colors font-medium">
+                About
+              </Link>
+              <Link to="/members" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Members
+              </Link>
+              <Link to="/contact" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Contact
+              </Link>
+              <Link to="/admin" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Admin
+              </Link>
+            </div>
             <div className="w-20"></div>
           </div>
         </div>
