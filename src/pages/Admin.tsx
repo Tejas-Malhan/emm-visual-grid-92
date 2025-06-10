@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,9 +62,45 @@ const Admin = () => {
     }
   };
 
+  const createExamplePost = async () => {
+    if (user) {
+      try {
+        const examplePost = {
+          instagram_url: "https://www.instagram.com/p/ABC123/",
+          title: "Beautiful Sunset Photography",
+          description: "Captured this amazing sunset during our latest photo shoot. The golden hour lighting was absolutely perfect for this portrait session.",
+          post_type: "photo",
+          user_id: user.id,
+          instagram_media_urls: ["https://www.instagram.com/p/ABC123/media/?size=l"]
+        };
+
+        const { error } = await supabase.from('posts').insert([examplePost]);
+
+        if (error) {
+          console.error('Error creating example post:', error);
+        } else {
+          console.log('Example post created successfully');
+          loadPosts();
+        }
+      } catch (error) {
+        console.error('Error creating example post:', error);
+      }
+    }
+  };
+
   useEffect(() => {
     loadPosts();
     loadMembers();
+    
+    // Create example post if no posts exist
+    const checkAndCreateExample = async () => {
+      const { data } = await supabase.from('posts').select('id').limit(1);
+      if (data && data.length === 0) {
+        createExamplePost();
+      }
+    };
+    
+    checkAndCreateExample();
   }, []);
 
   // Extract Instagram media URLs from the post URL
