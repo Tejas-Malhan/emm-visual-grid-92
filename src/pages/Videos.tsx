@@ -59,7 +59,7 @@ const Videos = () => {
             ))}
           </div>
         </div>
-      </nav>
+      </section>
 
       {/* Video Grid */}
       <section className="py-8 px-6">
