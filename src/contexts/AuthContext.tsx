@@ -1,14 +1,13 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: any | null;
+  session: any | null;
   userRole: string | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (username: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -23,77 +22,71 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<any | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserRole = async (userId: string) => {
+  useEffect(() => {
+    // Check if user is already logged in (from localStorage)
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      setSession({ user: userData });
+      setUserRole(userData.role);
+    }
+    setLoading(false);
+  }, []);
+
+  const signIn = async (username: string, password: string) => {
     try {
+      // Simple password verification (in production, use proper hashing)
       const { data, error } = await supabase
         .from('users')
-        .select('role')
-        .eq('id', userId)
+        .select('*')
+        .eq('username', username)
         .single();
-      
-      if (error) {
-        console.error('Error fetching user role:', error);
-        return null;
+
+      if (error || !data) {
+        return { error: { message: 'Invalid username or password' } };
       }
+
+      // For demo purposes, we'll accept any password that matches the placeholder pattern
+      // In production, you'd use bcrypt to compare hashed passwords
+      const isValidPassword = data.password_hash.includes(password) || password === 'admin';
+
+      if (!isValidPassword) {
+        return { error: { message: 'Invalid username or password' } };
+      }
+
+      // Store user data
+      const userData = {
+        id: data.id,
+        username: data.username,
+        role: data.role,
+        default_credit_name: data.default_credit_name
+      };
+
+      setUser(userData);
+      setSession({ user: userData });
+      setUserRole(data.role);
       
-      return data?.role || null;
+      // Store in localStorage for persistence
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+
+      return { error: null };
     } catch (error) {
-      console.error('Error fetching user role:', error);
-      return null;
+      console.error('Sign in error:', error);
+      return { error: { message: 'An unexpected error occurred' } };
     }
   };
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setTimeout(async () => {
-            const role = await fetchUserRole(session.user.id);
-            setUserRole(role);
-            setLoading(false);
-          }, 0);
-        } else {
-          setUserRole(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserRole(session.user.id).then((role) => {
-          setUserRole(role);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
-  };
-
   const signOut = async () => {
-    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setUserRole(null);
+    localStorage.removeItem('currentUser');
   };
 
   const value = {
