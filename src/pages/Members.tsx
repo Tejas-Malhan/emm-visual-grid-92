@@ -1,9 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Camera, Mail } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
+import { Link } from "react-router-dom";
+import { Instagram } from "lucide-react";
 import { db, Member } from "@/services/database";
 
 const Members = () => {
@@ -11,12 +12,10 @@ const Members = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadMembers = async () => {
+    const loadMembers = () => {
       try {
-        const membersList = db.getMembers();
-        // Filter out admin from public display
-        const publicMembers = membersList.filter(member => member.role !== 'admin');
-        setMembers(publicMembers);
+        const allMembers = db.getMembers();
+        setMembers(allMembers);
       } catch (error) {
         console.error('Error loading members:', error);
       } finally {
@@ -26,26 +25,6 @@ const Members = () => {
 
     loadMembers();
   }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <nav className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
-          <div className="max-w-6xl mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <Link to="/" className="text-2xl font-bold tracking-tight hover:text-primary transition-colors">
-                EMM
-              </Link>
-              <Navigation />
-            </div>
-          </div>
-        </nav>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-xl text-muted-foreground">Loading members...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,54 +40,56 @@ const Members = () => {
         </div>
       </nav>
 
-      {/* Header */}
-      <div className="pt-16 pb-12 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-6">
-              Our <span className="text-primary">Team</span>
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Meet the talented individuals behind our creative work
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Members Content */}
-      <div className="px-6 pb-20">
-        <div className="max-w-6xl mx-auto">
-          {members.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-xl text-muted-foreground">No team members to display yet.</p>
-              <p className="text-sm text-muted-foreground mt-2">Check back soon to meet our team!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {members.map((member) => (
-                <div key={member.id} className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow">
-                  <div className="aspect-square bg-muted rounded-lg overflow-hidden mb-4">
-                    <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20 flex items-center justify-center">
-                      <Camera className="h-16 w-16 text-muted-foreground/50" />
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-light tracking-tight mb-6">
+            Our <span className="text-primary">Team</span>
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Meet the creative minds behind our stunning visual storytelling
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="text-xl">Loading team members...</div>
+          </div>
+        ) : members.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-xl text-muted-foreground">No team members found</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {members.map((member, index) => (
+              <Card key={member.id} className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                <CardContent className="p-8 text-center">
+                  <div className="w-24 h-24 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                    <div className="text-2xl font-bold text-primary">
+                      {member.default_credit_name ? member.default_credit_name.charAt(0).toUpperCase() : member.username.charAt(0).toUpperCase()}
                     </div>
                   </div>
-                  
-                  <h3 className="text-xl font-semibold mb-2">{member.default_credit_name || member.username}</h3>
-                  <Badge variant="secondary" className="mb-4">
-                    {member.role}
-                  </Badge>
-                  
-                  <div className="flex gap-2">
-                    <button className="flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">
-                      <Mail className="h-4 w-4" />
-                      Contact
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                  <h3 className="text-xl font-semibold mb-2">
+                    {member.default_credit_name || member.username}
+                  </h3>
+                  <p className="text-muted-foreground mb-4 capitalize">{member.role}</p>
+                  {member.instagram_handle && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={`https://instagram.com/${member.instagram_handle.replace('@', '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Instagram className="h-4 w-4 mr-2" />
+                        Instagram
+                      </a>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

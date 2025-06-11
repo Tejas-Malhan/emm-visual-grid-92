@@ -33,12 +33,15 @@ const Admin = () => {
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newCreditName, setNewCreditName] = useState("");
+  const [newInstagramHandle, setNewInstagramHandle] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
 
   // Load media items
   const loadMediaItems = async () => {
     try {
+      console.log('Loading media items...');
       const items = db.getMediaItems();
+      console.log('Loaded media items:', items);
       setMediaItems(items);
     } catch (error) {
       console.error('Error loading media items:', error);
@@ -85,6 +88,14 @@ const Admin = () => {
     }
 
     try {
+      console.log('Adding media with data:', {
+        type: newMediaType,
+        cover_url: newMediaCoverUrl,
+        media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
+        description: newMediaDescription,
+        credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
+      });
+
       const newItem = db.addMediaItem({
         type: newMediaType,
         cover_url: newMediaCoverUrl,
@@ -92,6 +103,8 @@ const Admin = () => {
         description: newMediaDescription,
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
+
+      console.log('Added media item:', newItem);
 
       toast({
         title: "Success",
@@ -158,6 +171,7 @@ const Admin = () => {
         username: newUsername,
         password_hash: newPassword,
         default_credit_name: newCreditName,
+        instagram_handle: newInstagramHandle,
         role: newUserRole
       });
 
@@ -170,6 +184,7 @@ const Admin = () => {
       setNewUsername("");
       setNewPassword("");
       setNewCreditName("");
+      setNewInstagramHandle("");
       setNewUserRole('member');
       
       // Reload users
@@ -292,7 +307,7 @@ const Admin = () => {
             {/* Media List */}
             <Card>
               <CardHeader>
-                <CardTitle>Existing Media</CardTitle>
+                <CardTitle>Existing Media ({mediaItems.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingMedia ? (
@@ -393,6 +408,14 @@ const Admin = () => {
                     />
                   </div>
                   <div className="space-y-2">
+                    <label className="text-sm font-medium">Instagram Handle</label>
+                    <Input
+                      placeholder="@username"
+                      value={newInstagramHandle}
+                      onChange={(e) => setNewInstagramHandle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">Role</label>
                     <select
                       value={newUserRole}
@@ -430,6 +453,11 @@ const Admin = () => {
                           <p className="text-sm text-muted-foreground">
                             {user.default_credit_name || 'No credit name set'}
                           </p>
+                          {user.instagram_handle && (
+                            <p className="text-sm text-muted-foreground">
+                              Instagram: {user.instagram_handle}
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground">
                             Created: {new Date(user.created_at).toLocaleDateString()}
                           </p>
