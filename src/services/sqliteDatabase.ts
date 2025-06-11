@@ -187,44 +187,66 @@ class SQLiteDatabaseService {
       created_at: new Date().toISOString()
     };
     
-    console.log('➕ Adding new member to SQLite:', newMember);
+    console.log('🔍 DEBUG: Starting addMember process');
+    console.log('🔍 DEBUG: Input member data:', member);
+    console.log('🔍 DEBUG: Generated new member:', newMember);
     
     try {
+      const requestBody = {
+        action: 'add_member',
+        member: newMember
+      };
+      
+      console.log('🔍 DEBUG: Request body being sent:', requestBody);
+      console.log('🔍 DEBUG: Request body as JSON string:', JSON.stringify(requestBody));
+      
       const response = await fetch(this.DB_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          action: 'add_member',
-          member: newMember
-        })
+        body: JSON.stringify(requestBody)
       });
 
-      console.log('📡 Add member response status:', response.status);
+      console.log('🔍 DEBUG: Response status:', response.status);
+      console.log('🔍 DEBUG: Response headers:', Object.fromEntries(response.headers));
+      
+      const responseText = await response.text();
+      console.log('🔍 DEBUG: Raw response text:', responseText);
 
       if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const result = await response.json();
-          console.log('✅ Member added to SQLite successfully:', result);
+        try {
+          const result = JSON.parse(responseText);
+          console.log('🔍 DEBUG: Parsed response result:', result);
           
-          // Update local cache
-          this.data.members = this.data.members || [];
-          this.data.members.push(newMember);
-          
-          return newMember;
-        } else {
-          console.error('❌ Invalid response format from SQLite API');
-          throw new Error('Invalid response format');
+          if (result.success) {
+            console.log('✅ Member added to SQLite successfully:', result);
+            
+            // Update local cache
+            this.data.members = this.data.members || [];
+            this.data.members.push(newMember);
+            
+            return newMember;
+          } else {
+            console.error('❌ API returned success: false', result);
+            throw new Error(`API returned error: ${result.error || 'Unknown error'}`);
+          }
+        } catch (parseError) {
+          console.error('❌ Failed to parse response as JSON:', parseError);
+          console.error('❌ Response was:', responseText);
+          throw new Error('Invalid JSON response from API');
         }
       } else {
-        console.error('❌ Failed to add member to SQLite:', response.status);
-        throw new Error('Failed to add member');
+        console.error('❌ HTTP error response:', response.status, response.statusText);
+        console.error('❌ Response body:', responseText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.error('❌ Error adding member to SQLite:', error);
+      console.error('❌ FULL ERROR in addMember:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
       throw error;
     }
   }

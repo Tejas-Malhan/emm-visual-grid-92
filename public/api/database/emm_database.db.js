@@ -80,7 +80,7 @@ if (typeof window !== 'undefined') {
   
   window.fetch = function(url, options = {}) {
     if (typeof url === 'string' && url.includes('/api/database/emm_database.db.js')) {
-      console.log('🗄️ Intercepted database API request:', options.method, url);
+      console.log('🗄️ API: Intercepted database request:', options.method, url);
       
       const method = options.method || 'GET';
       const body = options.body || '';
@@ -93,60 +93,88 @@ if (typeof window !== 'undefined') {
       };
       
       if (method === 'OPTIONS') {
+        console.log('🗄️ API: Handling OPTIONS request');
         return Promise.resolve(new Response(null, { status: 200, headers }));
       }
       
       if (method === 'GET') {
         const data = getStoredData();
-        console.log('✅ SQLite GET response:', data);
+        console.log('🗄️ API: GET response:', data);
         return Promise.resolve(new Response(JSON.stringify(data), { status: 200, headers }));
       }
       
       if (method === 'POST') {
+        console.log('🗄️ API: Processing POST request');
+        console.log('🗄️ API: Request body:', body);
+        
         try {
           const requestData = JSON.parse(body);
+          console.log('🗄️ API: Parsed request data:', requestData);
+          
           const { action, item, member, id } = requestData;
+          console.log('🗄️ API: Extracted - action:', action, 'item:', item, 'member:', member, 'id:', id);
+          
           const data = getStoredData();
+          console.log('🗄️ API: Current data before operation:', data);
           
           if (action === 'add_media' && item) {
+            console.log('🗄️ API: Processing add_media action');
             data.media_items = data.media_items || [];
             data.media_items.push(item);
             data.last_updated = new Date().toISOString();
             data.version++;
             
             saveStoredData(data);
-            console.log('✅ Added media item to SQLite:', item.id);
+            console.log('✅ API: Added media item:', item.id);
             return Promise.resolve(new Response(JSON.stringify({ success: true, id: item.id }), { status: 200, headers }));
           }
           
           if (action === 'delete_media' && id) {
+            console.log('🗄️ API: Processing delete_media action');
             data.media_items = data.media_items.filter(mediaItem => mediaItem.id !== id);
             data.last_updated = new Date().toISOString();
             data.version++;
             
             saveStoredData(data);
-            console.log('✅ Deleted media item from SQLite:', id);
+            console.log('✅ API: Deleted media item:', id);
             return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200, headers }));
           }
           
           if (action === 'add_member' && member) {
+            console.log('🗄️ API: Processing add_member action');
+            console.log('🗄️ API: Member to add:', member);
+            
             data.members = data.members || [];
+            console.log('🗄️ API: Current members before adding:', data.members);
+            
             data.members.push(member);
             data.last_updated = new Date().toISOString();
             data.version++;
             
+            console.log('🗄️ API: Members after adding:', data.members);
+            console.log('🗄️ API: Data before saving:', data);
+            
             saveStoredData(data);
-            console.log('✅ Added member to SQLite:', member.id);
+            console.log('✅ API: Member added successfully:', member.id);
             return Promise.resolve(new Response(JSON.stringify({ success: true, id: member.id }), { status: 200, headers }));
           }
           
-          return Promise.resolve(new Response(JSON.stringify({ error: 'Invalid action or missing data' }), { status: 400, headers }));
+          console.error('❌ API: Invalid action or missing data. Action:', action, 'Item:', !!item, 'Member:', !!member, 'ID:', id);
+          return Promise.resolve(new Response(JSON.stringify({ 
+            error: 'Invalid action or missing data',
+            received: { action, hasItem: !!item, hasMember: !!member, hasId: !!id }
+          }), { status: 400, headers }));
         } catch (error) {
-          console.error('❌ Error parsing POST data:', error);
-          return Promise.resolve(new Response(JSON.stringify({ error: 'Invalid JSON data' }), { status: 400, headers }));
+          console.error('❌ API: Error parsing POST data:', error);
+          console.error('❌ API: Raw body was:', body);
+          return Promise.resolve(new Response(JSON.stringify({ 
+            error: 'Invalid JSON data',
+            details: error.message 
+          }), { status: 400, headers }));
         }
       }
       
+      console.error('❌ API: Method not allowed:', method);
       return Promise.resolve(new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers }));
     }
     
