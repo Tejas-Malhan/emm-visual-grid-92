@@ -1,3 +1,3 @@
 
-// Updated database service that uses the new file-based system
-export { fileDb as db, type MediaItem, type Member } from './fileDatabase';
+// Updated database service that uses the NEW file-based system
+export { newFileDb as db, type MediaItem, type Member } from './fileDatabase';

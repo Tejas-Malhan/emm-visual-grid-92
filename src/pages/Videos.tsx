@@ -6,19 +6,22 @@ import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { Link } from "react-router-dom";
 import { Play } from "lucide-react";
-import { db, MediaItem } from "@/services/database";
+import { newFileDb, MediaItem } from "@/services/fileDatabase";
 
 const Videos = () => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadMedia = () => {
+    const loadMedia = async () => {
       try {
-        const items = db.getMediaItems().filter(item => item.type === 'video');
+        console.log('🎥 Loading video media from NEW file database...');
+        await newFileDb.reloadFromFile();
+        const items = newFileDb.getMediaItems().filter(item => item.type === 'video');
+        console.log('✅ Video items loaded from NEW file database:', items);
         setMediaItems(items);
       } catch (error) {
-        console.error('Error loading video items:', error);
+        console.error('❌ Error loading video items from NEW file database:', error);
       } finally {
         setLoading(false);
       }
@@ -54,7 +57,7 @@ const Videos = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-xl">Loading videos...</div>
+            <div className="text-xl">Loading videos from NEW file database...</div>
           </div>
         ) : mediaItems.length === 0 ? (
           <div className="text-center py-12">

@@ -1,5 +1,5 @@
 
-// Proper file-based database service that persists to actual files
+// Brand new file-based database service - no localStorage fallback
 interface MediaItem {
   id: string;
   type: 'photo' | 'video';
@@ -27,29 +27,29 @@ interface Database {
   last_updated: string;
 }
 
-// Default data with working image URLs
-const defaultDatabase: Database = {
+// Fresh default data with working URLs
+const createDefaultDatabase = (): Database => ({
   version: 1,
   last_updated: new Date().toISOString(),
   media_items: [
     {
-      id: 'default-1',
+      id: 'photo-1',
       type: 'photo',
       cover_url: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&h=600&fit=crop',
       media_urls: [
         'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&h=600&fit=crop',
         'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&h=600&fit=crop'
       ],
-      description: 'Professional portrait session capturing authentic moments',
+      description: 'Professional portrait session',
       credits: ['Emma Martinez', 'Michael Chen'],
       uploaded_at: new Date().toISOString()
     },
     {
-      id: 'default-2',
+      id: 'video-1',
       type: 'video',
       cover_url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&h=600&fit=crop',
-      media_urls: ['https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4'],
-      description: 'Creative video production showcase',
+      media_urls: ['https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'],
+      description: 'Creative video showcase',
       credits: ['Sarah Johnson'],
       uploaded_at: new Date().toISOString()
     }
@@ -64,100 +64,71 @@ const defaultDatabase: Database = {
       created_at: new Date().toISOString()
     }
   ]
-};
+});
 
-class FileDatabaseService {
+class NewFileDatabaseService {
   private data: Database;
-  private dbFileName = 'emm_database.db';
+  private readonly DB_ENDPOINT = '/api/database/emm_database.db';
 
   constructor() {
-    this.data = { ...defaultDatabase };
-    this.initializeDatabase();
+    this.data = createDefaultDatabase();
+    this.initialize();
   }
 
-  private async initializeDatabase() {
+  private async initialize() {
+    console.log('🔄 Initializing NEW file database system...');
+    
+    // Clear any old localStorage data
+    localStorage.removeItem('emm_database_v3');
+    localStorage.removeItem('emm_database');
+    
     try {
-      console.log('Initializing file-based database system...');
-      
-      // Try to load from file first, then localStorage as absolute fallback
-      let loaded = false;
-      
-      // Try file-based storage first
-      try {
-        const response = await fetch(`/api/database/${this.dbFileName}`);
-        if (response.ok) {
-          const existingData = await response.json();
-          console.log('Loaded database from file:', existingData);
-          this.data = existingData;
-          loaded = true;
-        }
-      } catch (fileError) {
-        console.log('File database not available, checking localStorage...');
-      }
-
-      // Only check localStorage if file loading failed
-      if (!loaded) {
-        const localData = localStorage.getItem('emm_database_v3');
-        if (localData) {
-          try {
-            this.data = JSON.parse(localData);
-            console.log('Loaded database from localStorage backup:', this.data);
-            // Try to migrate to file storage
-            await this.saveDatabaseFile();
-          } catch (e) {
-            console.log('localStorage data invalid, using defaults');
-          }
-        } else {
-          console.log('No existing database found, creating new one...');
-          await this.saveDatabaseFile();
-        }
+      // Try to load from file database
+      const response = await fetch(this.DB_ENDPOINT);
+      if (response.ok) {
+        const fileData = await response.json();
+        console.log('✅ Loaded database from file:', fileData);
+        this.data = fileData;
+      } else {
+        console.log('📝 No existing database found, creating new one...');
+        await this.saveToFile();
       }
     } catch (error) {
-      console.error('Error initializing database:', error);
-      console.log('Using default data');
+      console.error('❌ Error loading from file database:', error);
+      console.log('📝 Using default data and creating new database file...');
+      await this.saveToFile();
     }
   }
 
-  private async saveDatabaseFile() {
+  private async saveToFile(): Promise<boolean> {
     try {
       this.data.last_updated = new Date().toISOString();
-      this.data.version = (this.data.version || 0) + 1;
+      this.data.version++;
       
-      console.log('Saving database to file system:', this.data);
+      console.log('💾 Saving to file database:', this.data);
       
-      // Try to save to file system first
-      try {
-        const response = await fetch(`/api/database/${this.dbFileName}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(this.data)
-        });
+      const response = await fetch(this.DB_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.data)
+      });
 
-        if (response.ok) {
-          console.log('Database saved successfully to file system');
-          // Clear localStorage since file system is working
-          localStorage.removeItem('emm_database_v3');
-          return;
-        }
-      } catch (fileError) {
-        console.error('File system save failed:', fileError);
+      if (response.ok) {
+        console.log('✅ Database saved successfully to file');
+        return true;
+      } else {
+        console.error('❌ Failed to save to file database:', response.status);
+        return false;
       }
-
-      // Only fallback to localStorage if file system fails
-      console.log('Falling back to localStorage...');
-      localStorage.setItem('emm_database_v3', JSON.stringify(this.data));
-      console.log('Database saved to localStorage as fallback');
-      
     } catch (error) {
-      console.error('Error saving database:', error);
+      console.error('❌ Error saving to file database:', error);
+      return false;
     }
   }
 
   // Media Items
   getMediaItems(): MediaItem[] {
-    console.log('Getting media items from database:', this.data.media_items);
+    console.log('📖 Getting media items from NEW database:', this.data.media_items);
     return [...(this.data.media_items || [])];
   }
 
@@ -168,17 +139,18 @@ class FileDatabaseService {
       uploaded_at: new Date().toISOString()
     };
     
-    console.log('Adding new media item to database:', newItem);
+    console.log('➕ Adding new media item to NEW database:', newItem);
     
-    if (!this.data.media_items) {
-      this.data.media_items = [];
-    }
-    
+    this.data.media_items = this.data.media_items || [];
     this.data.media_items.push(newItem);
-    await this.saveDatabaseFile();
     
-    console.log('Media item added to database. Total items:', this.data.media_items.length);
-    return newItem;
+    const saved = await this.saveToFile();
+    if (saved) {
+      console.log('✅ Media item added successfully. Total items:', this.data.media_items.length);
+      return newItem;
+    } else {
+      throw new Error('Failed to save media item to database');
+    }
   }
 
   async deleteMediaItem(id: string): Promise<boolean> {
@@ -188,9 +160,11 @@ class FileDatabaseService {
     this.data.media_items = this.data.media_items.filter(item => item.id !== id);
     
     if (this.data.media_items.length < initialLength) {
-      await this.saveDatabaseFile();
-      console.log(`Media item ${id} deleted from database. Remaining items:`, this.data.media_items.length);
-      return true;
+      const saved = await this.saveToFile();
+      if (saved) {
+        console.log(`✅ Media item ${id} deleted. Remaining items:`, this.data.media_items.length);
+        return true;
+      }
     }
     return false;
   }
@@ -207,32 +181,31 @@ class FileDatabaseService {
       created_at: new Date().toISOString()
     };
     
-    console.log('Adding new member to database:', newMember);
+    console.log('➕ Adding new member to NEW database:', newMember);
     
-    if (!this.data.members) {
-      this.data.members = [];
-    }
-    
+    this.data.members = this.data.members || [];
     this.data.members.push(newMember);
-    await this.saveDatabaseFile();
     
-    console.log('Member added to database. Total members:', this.data.members.length);
-    return newMember;
+    const saved = await this.saveToFile();
+    if (saved) {
+      console.log('✅ Member added successfully. Total members:', this.data.members.length);
+      return newMember;
+    } else {
+      throw new Error('Failed to save member to database');
+    }
   }
 
   authenticateUser(username: string, password: string): Member | null {
     const user = this.data.members?.find(m => 
       m.username === username && m.password_hash === password
     );
-    console.log('Database authentication for:', username, user ? 'SUCCESS' : 'FAILED');
+    console.log('🔐 NEW Database authentication for:', username, user ? 'SUCCESS' : 'FAILED');
     return user || null;
   }
 
-  // Database management
-  async clearDatabase() {
-    console.log('Clearing database...');
-    this.data = { ...defaultDatabase };
-    await this.saveDatabaseFile();
+  // Force reload from file
+  async reloadFromFile() {
+    await this.initialize();
   }
 
   getDatabaseStats() {
@@ -240,16 +213,10 @@ class FileDatabaseService {
       mediaItems: this.data.media_items?.length || 0,
       members: this.data.members?.length || 0,
       version: this.data.version,
-      lastUpdated: this.data.last_updated,
-      fileName: this.dbFileName
+      lastUpdated: this.data.last_updated
     };
-  }
-
-  // Force reload from file
-  async reloadFromFile() {
-    await this.initializeDatabase();
   }
 }
 
-export const fileDb = new FileDatabaseService();
+export const newFileDb = new NewFileDatabaseService();
 export type { MediaItem, Member };
