@@ -58,11 +58,17 @@ class SQLiteDatabaseService {
       });
       
       console.log('📡 SQLite API Response status:', response.status);
+      console.log('📡 Content-Type:', response.headers.get('content-type'));
       
       if (response.ok) {
-        const fileData = await response.json();
-        this.data = fileData;
-        console.log('✅ Loaded database from SQLite:', this.data);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const fileData = await response.json();
+          this.data = fileData;
+          console.log('✅ Loaded database from SQLite:', this.data);
+        } else {
+          console.log('⚠️ API returned non-JSON, using default data');
+        }
       } else {
         console.log('⚠️ SQLite API request failed, using default data');
       }
@@ -101,15 +107,23 @@ class SQLiteDatabaseService {
         })
       });
 
+      console.log('📡 Add media response status:', response.status);
+      
       if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Media item added to SQLite successfully:', result);
-        
-        // Update local cache
-        this.data.media_items = this.data.media_items || [];
-        this.data.media_items.push(newItem);
-        
-        return newItem;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          console.log('✅ Media item added to SQLite successfully:', result);
+          
+          // Update local cache
+          this.data.media_items = this.data.media_items || [];
+          this.data.media_items.push(newItem);
+          
+          return newItem;
+        } else {
+          console.error('❌ Invalid response format from SQLite API');
+          throw new Error('Invalid response format');
+        }
       } else {
         console.error('❌ Failed to add media item to SQLite:', response.status);
         throw new Error('Failed to add media item');
@@ -136,13 +150,21 @@ class SQLiteDatabaseService {
         })
       });
 
+      console.log('📡 Delete media response status:', response.status);
+
       if (response.ok) {
-        console.log('✅ Media item deleted from SQLite successfully');
-        
-        // Update local cache
-        this.data.media_items = this.data.media_items.filter(item => item.id !== id);
-        
-        return true;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          console.log('✅ Media item deleted from SQLite successfully');
+          
+          // Update local cache
+          this.data.media_items = this.data.media_items.filter(item => item.id !== id);
+          
+          return true;
+        } else {
+          console.error('❌ Invalid response format from SQLite API');
+          return false;
+        }
       } else {
         console.error('❌ Failed to delete media item from SQLite:', response.status);
         return false;
@@ -180,15 +202,23 @@ class SQLiteDatabaseService {
         })
       });
 
+      console.log('📡 Add member response status:', response.status);
+
       if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Member added to SQLite successfully:', result);
-        
-        // Update local cache
-        this.data.members = this.data.members || [];
-        this.data.members.push(newMember);
-        
-        return newMember;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          console.log('✅ Member added to SQLite successfully:', result);
+          
+          // Update local cache
+          this.data.members = this.data.members || [];
+          this.data.members.push(newMember);
+          
+          return newMember;
+        } else {
+          console.error('❌ Invalid response format from SQLite API');
+          throw new Error('Invalid response format');
+        }
       } else {
         console.error('❌ Failed to add member to SQLite:', response.status);
         throw new Error('Failed to add member');
