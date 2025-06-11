@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,41 +35,41 @@ const Admin = () => {
   const [newInstagramHandle, setNewInstagramHandle] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
 
-  // Load media items from fixed localStorage database
+  // Load media items from .db file database
   const loadMediaItems = async () => {
     try {
-      console.log('Loading media items from FIXED localStorage database...');
+      console.log('Loading media items from .db file database...');
       await newFileDb.reloadFromStorage();
       const items = newFileDb.getMediaItems();
-      console.log('Loaded media items from FIXED localStorage database:', items);
+      console.log('Loaded media items from .db file database:', items);
       setMediaItems(items);
     } catch (error) {
-      console.error('Error loading media items from FIXED localStorage database:', error);
+      console.error('Error loading media items from .db file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load media items from localStorage database",
+        description: "Failed to load media items from .db file database",
       });
     } finally {
       setLoadingMedia(false);
     }
   };
 
-  // Load users from fixed localStorage database (only for admins)
+  // Load users from .db file database (only for admins)
   const loadUsers = async () => {
     if (userRole !== 'admin') return;
     
     try {
       await newFileDb.reloadFromStorage();
       const members = newFileDb.getMembers();
-      console.log('Loaded members from FIXED localStorage database:', members);
+      console.log('Loaded members from .db file database:', members);
       setUsers(members);
     } catch (error) {
-      console.error('Error loading users from FIXED localStorage database:', error);
+      console.error('Error loading users from .db file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load users from localStorage database",
+        description: "Failed to load users from .db file database",
       });
     } finally {
       setLoadingUsers(false);
@@ -95,7 +94,7 @@ const Admin = () => {
     }
 
     try {
-      console.log('Adding media to FIXED localStorage database with data:', {
+      console.log('Adding media to .db file database with data:', {
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
@@ -116,11 +115,11 @@ const Admin = () => {
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
 
-      console.log('Added media item to FIXED localStorage database:', newItem);
+      console.log('Added media item to .db file database:', newItem);
 
       toast({
         title: "Success",
-        description: "Media item saved to localStorage database successfully",
+        description: "Media item saved to .db file database successfully",
       });
       
       // Reset form
@@ -132,11 +131,11 @@ const Admin = () => {
       // Reload media items
       await loadMediaItems();
     } catch (error) {
-      console.error('Error adding media to FIXED localStorage database:', error);
+      console.error('Error adding media to .db file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add media item to localStorage database",
+        description: "Failed to add media item to .db file database",
       });
     }
   };
@@ -148,22 +147,22 @@ const Admin = () => {
       if (success) {
         toast({
           title: "Success",
-          description: "Media item deleted from localStorage database successfully",
+          description: "Media item deleted from .db file database successfully",
         });
         loadMediaItems();
       } else {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to delete media item from localStorage database",
+          description: "Failed to delete media item from .db file database",
         });
       }
     } catch (error) {
-      console.error('Error deleting media from FIXED localStorage database:', error);
+      console.error('Error deleting media from .db file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete media item from localStorage database",
+        description: "Failed to delete media item from .db file database",
       });
     }
   };
@@ -187,11 +186,11 @@ const Admin = () => {
         role: newUserRole
       });
 
-      console.log('Added user to FIXED localStorage database:', newUser);
+      console.log('Added user to .db file database:', newUser);
 
       toast({
         title: "Success",
-        description: "User saved to localStorage database successfully",
+        description: "User saved to .db file database successfully",
       });
       
       // Reset form
@@ -204,11 +203,11 @@ const Admin = () => {
       // Reload users
       loadUsers();
     } catch (error) {
-      console.error('Error adding user to FIXED localStorage database:', error);
+      console.error('Error adding user to .db file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add user to localStorage database",
+        description: "Failed to add user to .db file database",
       });
     }
   };
@@ -235,7 +234,7 @@ const Admin = () => {
             </h1>
             <p className="text-muted-foreground">Welcome back, {user?.username}</p>
             <p className="text-xs text-muted-foreground">
-              localStorage Database | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
+              .db File Database | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
             </p>
           </div>
           <Button variant="outline" onClick={handleSignOut}>
@@ -506,3 +505,5 @@ const Admin = () => {
 };
 
 export default Admin;
+
+}

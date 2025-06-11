@@ -1,5 +1,5 @@
 
-// Enhanced file-based database service with localStorage fallback
+// Enhanced file-based database service with .db file storage
 interface MediaItem {
   id: string;
   type: 'photo' | 'video';
@@ -68,7 +68,7 @@ const createDefaultDatabase = (): Database => ({
 
 class EnhancedFileDatabaseService {
   private data: Database;
-  private readonly STORAGE_KEY = 'emm_database_persistent';
+  private readonly DB_FILE_URL = '/api/database/emm_database.db';
   private isInitialized = false;
 
   constructor() {
@@ -79,46 +79,59 @@ class EnhancedFileDatabaseService {
   private async initialize() {
     if (this.isInitialized) return;
     
-    console.log('🔄 Initializing FIXED file database system...');
+    console.log('🔄 Initializing .db file database system...');
     
     try {
-      // First try localStorage for persistent storage
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (stored) {
-        const parsedData = JSON.parse(stored);
-        this.data = parsedData;
-        console.log('✅ Loaded database from localStorage:', this.data);
+      // Try to load from .db file
+      const response = await fetch(this.DB_FILE_URL);
+      if (response.ok) {
+        const fileData = await response.json();
+        this.data = fileData;
+        console.log('✅ Loaded database from .db file:', this.data);
       } else {
-        console.log('📝 No stored data found, using default database');
-        await this.saveToStorage(); // Save default data
+        console.log('📝 No .db file found, creating with default data');
+        await this.saveToFile(); // Save default data to .db file
       }
     } catch (error) {
-      console.error('❌ Error loading from localStorage:', error);
-      console.log('📝 Using default data');
+      console.error('❌ Error loading from .db file:', error);
+      console.log('📝 Using default data and will try to save to .db file');
+      await this.saveToFile();
     }
     
     this.isInitialized = true;
   }
 
-  private async saveToStorage(): Promise<boolean> {
+  private async saveToFile(): Promise<boolean> {
     try {
       this.data.last_updated = new Date().toISOString();
       this.data.version++;
       
-      console.log('💾 Saving to localStorage:', this.data);
+      console.log('💾 Saving to .db file:', this.data);
       
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
-      console.log('✅ Database saved successfully to localStorage');
-      return true;
+      const response = await fetch(this.DB_FILE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(this.data)
+      });
+
+      if (response.ok) {
+        console.log('✅ Database saved successfully to .db file');
+        return true;
+      } else {
+        console.error('❌ Failed to save to .db file:', response.status, response.statusText);
+        return false;
+      }
     } catch (error) {
-      console.error('❌ Error saving to localStorage:', error);
+      console.error('❌ Error saving to .db file:', error);
       return false;
     }
   }
 
   // Media Items
   getMediaItems(): MediaItem[] {
-    console.log('📖 Getting media items from FIXED database:', this.data.media_items);
+    console.log('📖 Getting media items from .db file database:', this.data.media_items);
     return [...(this.data.media_items || [])];
   }
 
@@ -129,17 +142,17 @@ class EnhancedFileDatabaseService {
       uploaded_at: new Date().toISOString()
     };
     
-    console.log('➕ Adding new media item to FIXED database:', newItem);
+    console.log('➕ Adding new media item to .db file database:', newItem);
     
     this.data.media_items = this.data.media_items || [];
     this.data.media_items.push(newItem);
     
-    const saved = await this.saveToStorage();
+    const saved = await this.saveToFile();
     if (saved) {
-      console.log('✅ Media item added successfully. Total items:', this.data.media_items.length);
+      console.log('✅ Media item added successfully to .db file. Total items:', this.data.media_items.length);
       return newItem;
     } else {
-      console.log('⚠️ Failed to save to storage but keeping in memory');
+      console.log('⚠️ Failed to save to .db file but keeping in memory');
       return newItem;
     }
   }
@@ -151,8 +164,8 @@ class EnhancedFileDatabaseService {
     this.data.media_items = this.data.media_items.filter(item => item.id !== id);
     
     if (this.data.media_items.length < initialLength) {
-      const saved = await this.saveToStorage();
-      console.log(`✅ Media item ${id} deleted. Remaining items:`, this.data.media_items.length);
+      const saved = await this.saveToFile();
+      console.log(`✅ Media item ${id} deleted from .db file. Remaining items:`, this.data.media_items.length);
       return true;
     }
     return false;
@@ -170,17 +183,17 @@ class EnhancedFileDatabaseService {
       created_at: new Date().toISOString()
     };
     
-    console.log('➕ Adding new member to FIXED database:', newMember);
+    console.log('➕ Adding new member to .db file database:', newMember);
     
     this.data.members = this.data.members || [];
     this.data.members.push(newMember);
     
-    const saved = await this.saveToStorage();
+    const saved = await this.saveToFile();
     if (saved) {
-      console.log('✅ Member added successfully. Total members:', this.data.members.length);
+      console.log('✅ Member added successfully to .db file. Total members:', this.data.members.length);
       return newMember;
     } else {
-      console.log('⚠️ Failed to save to storage but keeping in memory');
+      console.log('⚠️ Failed to save to .db file but keeping in memory');
       return newMember;
     }
   }
@@ -189,11 +202,11 @@ class EnhancedFileDatabaseService {
     const user = this.data.members?.find(m => 
       m.username === username && m.password_hash === password
     );
-    console.log('🔐 FIXED Database authentication for:', username, user ? 'SUCCESS' : 'FAILED');
+    console.log('🔐 .db file Database authentication for:', username, user ? 'SUCCESS' : 'FAILED');
     return user || null;
   }
 
-  // Force reload from storage
+  // Force reload from .db file
   async reloadFromStorage() {
     this.isInitialized = false;
     await this.initialize();
@@ -210,10 +223,9 @@ class EnhancedFileDatabaseService {
 
   // Clear all data (for testing)
   async clearDatabase() {
-    localStorage.removeItem(this.STORAGE_KEY);
     this.data = createDefaultDatabase();
-    await this.saveToStorage();
-    console.log('🗑️ Database cleared and reset to defaults');
+    await this.saveToFile();
+    console.log('🗑️ Database cleared and reset to defaults in .db file');
   }
 }
 
