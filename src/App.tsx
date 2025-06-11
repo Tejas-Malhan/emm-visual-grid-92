@@ -11,7 +11,6 @@ import Gallery from "./pages/Gallery";
 import Videos from "./pages/Videos";
 import About from "./pages/About";
 import Members from "./pages/Members";
-import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -31,7 +30,6 @@ const App = () => (
             <Route path="/videos" element={<Videos />} />
             <Route path="/about" element={<About />} />
             <Route path="/members" element={<Members />} />
-            <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
             <Route 
               path="/admin" 

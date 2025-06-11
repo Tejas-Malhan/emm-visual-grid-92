@@ -13,7 +13,6 @@ const Navigation = () => {
     { name: "Videos", path: "/videos" },
     { name: "About", path: "/about" },
     { name: "Members", path: "/members" },
-    { name: "Contact", path: "/contact" },
   ];
 
   return (
@@ -32,7 +31,7 @@ const Navigation = () => {
         </Link>
       ))}
       
-      {userRole === 'admin' && (
+      {user && userRole === 'admin' && (
         <Link
           to="/admin"
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-accent hover:text-accent-foreground ${
