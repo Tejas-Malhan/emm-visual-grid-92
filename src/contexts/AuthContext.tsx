@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/services/database';
 
 interface AuthContextType {
   user: any | null;
@@ -45,47 +45,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('Attempting sign in with:', username, password);
     
     try {
-      // Query the custom users table
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', username)
-        .single();
-
-      console.log('Database query result:', { data, error });
-
-      if (error) {
-        console.error('Database error:', error);
-        return { error: { message: 'Invalid username or password' } };
-      }
-
-      if (!data) {
-        console.log('No user found');
-        return { error: { message: 'Invalid username or password' } };
-      }
-
-      // Simple password check - in production you'd use proper hashing
-      const isValidPassword = password === 'admin' || data.password_hash === password;
+      // Use the local database service
+      const user = db.authenticateUser(username, password);
       
-      console.log('Password validation:', isValidPassword, 'Expected:', data.password_hash, 'Provided:', password);
+      console.log('Database authentication result:', user);
 
-      if (!isValidPassword) {
+      if (!user) {
+        console.log('Authentication failed - invalid credentials');
         return { error: { message: 'Invalid username or password' } };
       }
 
       // Store user data
       const userData = {
-        id: data.id,
-        username: data.username,
-        role: data.role,
-        default_credit_name: data.default_credit_name
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        default_credit_name: user.default_credit_name
       };
 
       console.log('Setting user data:', userData);
 
       setUser(userData);
       setSession({ user: userData });
-      setUserRole(data.role);
+      setUserRole(user.role);
       
       // Store in localStorage for persistence
       localStorage.setItem('currentUser', JSON.stringify(userData));
