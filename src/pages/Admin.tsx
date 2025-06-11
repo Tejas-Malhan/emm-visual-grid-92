@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -235,7 +234,7 @@ const Admin = () => {
             </h1>
             <p className="text-muted-foreground">Welcome back, {user?.username}</p>
             <p className="text-xs text-muted-foreground">
-              File Database: {dbStats.fileName} | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
+              File Database | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
             </p>
           </div>
           <Button variant="outline" onClick={handleSignOut}>
