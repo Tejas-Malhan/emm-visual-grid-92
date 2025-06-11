@@ -86,7 +86,7 @@ const Admin = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in cover URL and description",
       });
       return;
     }
@@ -100,10 +100,15 @@ const Admin = () => {
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
 
+      // If no media URLs provided, use cover URL as the single media URL
+      const mediaUrls = newMediaUrls.trim() 
+        ? newMediaUrls.split(',').map(url => url.trim()).filter(url => url)
+        : [newMediaCoverUrl];
+
       const newItem = db.addMediaItem({
         type: newMediaType,
         cover_url: newMediaCoverUrl,
-        media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
+        media_urls: mediaUrls,
         description: newMediaDescription,
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
@@ -122,7 +127,7 @@ const Admin = () => {
       setNewMediaCredits("");
       
       // Reload media items
-      loadMediaItems();
+      await loadMediaItems();
     } catch (error) {
       console.error('Error adding media:', error);
       toast({
