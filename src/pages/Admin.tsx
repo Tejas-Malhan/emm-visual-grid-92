@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -271,7 +272,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Add New Media (localStorage Database)
+                  Add New Media (.db File Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -322,7 +323,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddMedia} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Media to localStorage Database
+                  Add Media to .db File Database
                 </Button>
               </CardContent>
             </Card>
@@ -330,13 +331,13 @@ const Admin = () => {
             {/* Media List */}
             <Card>
               <CardHeader>
-                <CardTitle>localStorage Database Media ({mediaItems.length})</CardTitle>
+                <CardTitle>.db File Database Media ({mediaItems.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingMedia ? (
-                  <div className="text-center py-8">Loading media from localStorage database...</div>
+                  <div className="text-center py-8">Loading media from .db file database...</div>
                 ) : mediaItems.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No media items found in localStorage database</div>
+                  <div className="text-center py-8 text-muted-foreground">No media items found in .db file database</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {mediaItems.map((item) => (
@@ -366,7 +367,7 @@ const Admin = () => {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Media</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete this media item from the localStorage database? This action cannot be undone.
+                                      Are you sure you want to delete this media item from the .db file database? This action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -403,7 +404,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Plus className="h-5 w-5" />
-                  Add New User (localStorage Database)
+                  Add New User (.db File Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -455,7 +456,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddUser} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add User to localStorage Database
+                  Add User to .db File Database
                 </Button>
               </CardContent>
             </Card>
@@ -463,13 +464,13 @@ const Admin = () => {
             {/* Users List */}
             <Card>
               <CardHeader>
-                <CardTitle>localStorage Database Users</CardTitle>
+                <CardTitle>.db File Database Users</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingUsers ? (
-                  <div className="text-center py-8">Loading users from localStorage database...</div>
+                  <div className="text-center py-8">Loading users from .db file database...</div>
                 ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No users found in localStorage database</div>
+                  <div className="text-center py-8 text-muted-foreground">No users found in .db file database</div>
                 ) : (
                   <div className="space-y-4">
                     {users.map((user) => (
@@ -505,5 +506,3 @@ const Admin = () => {
 };
 
 export default Admin;
-
-}
