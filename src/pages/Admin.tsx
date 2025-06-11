@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { fileDb, MediaItem, Member } from "@/services/fileDatabase";
+import { newFileDb, MediaItem, Member } from "@/services/fileDatabase";
 import { LogOut, Upload, Users, Image, Video, Trash2, Plus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -35,41 +35,41 @@ const Admin = () => {
   const [newInstagramHandle, setNewInstagramHandle] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
 
-  // Load media items from file database
+  // Load media items from new file database
   const loadMediaItems = async () => {
     try {
-      console.log('Loading media items from file database...');
-      await fileDb.reloadFromFile();
-      const items = fileDb.getMediaItems();
-      console.log('Loaded media items from file database:', items);
+      console.log('Loading media items from new file database...');
+      await newFileDb.reloadFromFile();
+      const items = newFileDb.getMediaItems();
+      console.log('Loaded media items from new file database:', items);
       setMediaItems(items);
     } catch (error) {
-      console.error('Error loading media items from file database:', error);
+      console.error('Error loading media items from new file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load media items from file database",
+        description: "Failed to load media items from new file database",
       });
     } finally {
       setLoadingMedia(false);
     }
   };
 
-  // Load users from file database (only for admins)
+  // Load users from new file database (only for admins)
   const loadUsers = async () => {
     if (userRole !== 'admin') return;
     
     try {
-      await fileDb.reloadFromFile();
-      const members = fileDb.getMembers();
-      console.log('Loaded members from file database:', members);
+      await newFileDb.reloadFromFile();
+      const members = newFileDb.getMembers();
+      console.log('Loaded members from new file database:', members);
       setUsers(members);
     } catch (error) {
-      console.error('Error loading users from file database:', error);
+      console.error('Error loading users from new file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load users from file database",
+        description: "Failed to load users from new file database",
       });
     } finally {
       setLoadingUsers(false);
@@ -94,7 +94,7 @@ const Admin = () => {
     }
 
     try {
-      console.log('Adding media to file database with data:', {
+      console.log('Adding media to new file database with data:', {
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
@@ -107,7 +107,7 @@ const Admin = () => {
         ? newMediaUrls.split(',').map(url => url.trim()).filter(url => url)
         : [newMediaCoverUrl];
 
-      const newItem = await fileDb.addMediaItem({
+      const newItem = await newFileDb.addMediaItem({
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: mediaUrls,
@@ -115,11 +115,11 @@ const Admin = () => {
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
 
-      console.log('Added media item to file database:', newItem);
+      console.log('Added media item to new file database:', newItem);
 
       toast({
         title: "Success",
-        description: "Media item saved to file database successfully",
+        description: "Media item saved to new file database successfully",
       });
       
       // Reset form
@@ -131,38 +131,38 @@ const Admin = () => {
       // Reload media items
       await loadMediaItems();
     } catch (error) {
-      console.error('Error adding media to file database:', error);
+      console.error('Error adding media to new file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add media item to file database",
+        description: "Failed to add media item to new file database",
       });
     }
   };
 
   const handleDeleteMedia = async (id: string) => {
     try {
-      const success = await fileDb.deleteMediaItem(id);
+      const success = await newFileDb.deleteMediaItem(id);
       
       if (success) {
         toast({
           title: "Success",
-          description: "Media item deleted from file database successfully",
+          description: "Media item deleted from new file database successfully",
         });
         loadMediaItems();
       } else {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to delete media item from file database",
+          description: "Failed to delete media item from new file database",
         });
       }
     } catch (error) {
-      console.error('Error deleting media from file database:', error);
+      console.error('Error deleting media from new file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete media item from file database",
+        description: "Failed to delete media item from new file database",
       });
     }
   };
@@ -178,7 +178,7 @@ const Admin = () => {
     }
 
     try {
-      const newUser = await fileDb.addMember({
+      const newUser = await newFileDb.addMember({
         username: newUsername,
         password_hash: newPassword,
         default_credit_name: newCreditName,
@@ -186,11 +186,11 @@ const Admin = () => {
         role: newUserRole
       });
 
-      console.log('Added user to file database:', newUser);
+      console.log('Added user to new file database:', newUser);
 
       toast({
         title: "Success",
-        description: "User saved to file database successfully",
+        description: "User saved to new file database successfully",
       });
       
       // Reset form
@@ -203,11 +203,11 @@ const Admin = () => {
       // Reload users
       loadUsers();
     } catch (error) {
-      console.error('Error adding user to file database:', error);
+      console.error('Error adding user to new file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add user to file database",
+        description: "Failed to add user to new file database",
       });
     }
   };
@@ -221,7 +221,7 @@ const Admin = () => {
   };
 
   const isAdmin = userRole === 'admin';
-  const dbStats = fileDb.getDatabaseStats();
+  const dbStats = newFileDb.getDatabaseStats();
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -505,3 +505,5 @@ const Admin = () => {
 };
 
 export default Admin;
+
+</edits_to_apply>

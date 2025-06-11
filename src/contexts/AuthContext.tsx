@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { fileDb } from '@/services/fileDatabase';
+import { newFileDb } from '@/services/fileDatabase';
 
 interface AuthContextType {
   user: any | null;
@@ -42,19 +42,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (username: string, password: string) => {
-    console.log('Attempting sign in with file database:', username, password);
+    console.log('Attempting sign in with new file database:', username, password);
     
     try {
       // Force reload from file database to get latest users
-      await fileDb.reloadFromFile();
+      await newFileDb.reloadFromFile();
       
-      // Use the file database service
-      const user = fileDb.authenticateUser(username, password);
+      // Use the new file database service
+      const user = newFileDb.authenticateUser(username, password);
       
-      console.log('File database authentication result:', user);
+      console.log('New file database authentication result:', user);
 
       if (!user) {
-        console.log('Authentication failed - invalid credentials in file database');
+        console.log('Authentication failed - invalid credentials in new file database');
         return { error: { message: 'Invalid username or password' } };
       }
 
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         default_credit_name: user.default_credit_name
       };
 
-      console.log('Setting user data from file database:', userData);
+      console.log('Setting user data from new file database:', userData);
 
       setUser(userData);
       setSession({ user: userData });
@@ -77,8 +77,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return { error: null };
     } catch (error) {
-      console.error('Sign in error with file database:', error);
-      return { error: { message: 'An unexpected error occurred with file database' } };
+      console.error('Sign in error with new file database:', error);
+      return { error: { message: 'An unexpected error occurred with new file database' } };
     }
   };
 
