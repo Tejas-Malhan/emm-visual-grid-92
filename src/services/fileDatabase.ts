@@ -68,7 +68,7 @@ const createDefaultDatabase = (): Database => ({
 
 class EnhancedFileDatabaseService {
   private data: Database;
-  private readonly DB_FILE_URL = '/api/database/emm_database.db.js';
+  private readonly DB_API_URL = '/api/database/emm_database.db.js';
   private isInitialized = false;
 
   constructor() {
@@ -79,12 +79,11 @@ class EnhancedFileDatabaseService {
   private async initialize() {
     if (this.isInitialized) return;
     
-    console.log('🔄 Initializing enhanced .db file database system...');
+    console.log('🔄 Initializing .db file database system...');
     
     try {
-      // Try to load from .db file API
-      console.log('📡 Attempting to fetch from .db file API...');
-      const response = await fetch(this.DB_FILE_URL, {
+      console.log('📡 Fetching from database API...');
+      const response = await fetch(this.DB_API_URL, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -92,38 +91,26 @@ class EnhancedFileDatabaseService {
         }
       });
       
-      console.log('📡 API Response status:', response.status, response.statusText);
+      console.log('📡 API Response status:', response.status);
       
-      if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
-        const fileData = await response.json();
-        this.data = fileData;
-        console.log('✅ Loaded database from .db file API:', this.data);
-      } else {
-        console.log('⚠️ API not available or returned non-JSON, using browser handler...');
-        // Fallback to browser handler
-        if (typeof window !== 'undefined' && window.databaseHandler) {
-          this.data = window.databaseHandler.GET();
-          console.log('✅ Loaded database from browser handler:', this.data);
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        console.log('📡 Content-Type:', contentType);
+        
+        if (contentType && contentType.includes('application/json')) {
+          const fileData = await response.json();
+          this.data = fileData;
+          console.log('✅ Loaded database from API:', this.data);
         } else {
-          console.log('📝 Using default data');
-          await this.saveToFile(); // Try to save default data
+          console.log('⚠️ API returned non-JSON, using default data');
+          await this.saveToFile();
         }
+      } else {
+        console.log('⚠️ API request failed, using default data');
+        await this.saveToFile();
       }
     } catch (error) {
-      console.error('❌ Error loading from .db file:', error);
-      console.log('📝 Using fallback - trying browser handler or default data');
-      
-      // Try browser handler as fallback
-      if (typeof window !== 'undefined' && window.databaseHandler) {
-        try {
-          this.data = window.databaseHandler.GET();
-          console.log('✅ Loaded database from browser handler fallback:', this.data);
-        } catch (browserError) {
-          console.error('❌ Browser handler also failed:', browserError);
-          console.log('📝 Using default data as final fallback');
-        }
-      }
-      
+      console.error('❌ Error loading from API:', error);
       await this.saveToFile();
     }
     
@@ -135,47 +122,34 @@ class EnhancedFileDatabaseService {
       this.data.last_updated = new Date().toISOString();
       this.data.version++;
       
-      console.log('💾 Saving to .db file API:', this.data);
+      console.log('💾 Saving to database API:', this.data);
       
-      // Try API first
-      try {
-        const response = await fetch(this.DB_FILE_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(this.data)
-        });
+      const response = await fetch(this.DB_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(this.data)
+      });
 
-        if (response.ok) {
-          console.log('✅ Database saved successfully to .db file API');
-          return true;
-        } else {
-          console.error('❌ Failed to save to .db file API:', response.status, response.statusText);
-        }
-      } catch (apiError) {
-        console.error('❌ API save failed:', apiError);
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Database saved successfully:', result);
+        return true;
+      } else {
+        console.error('❌ Failed to save to API:', response.status, response.statusText);
+        return false;
       }
-
-      // Fallback to browser handler
-      if (typeof window !== 'undefined' && window.databaseHandler) {
-        const result = window.databaseHandler.POST(this.data);
-        console.log('✅ Database saved to browser handler as fallback');
-        return result.success;
-      }
-
-      console.log('⚠️ No save method available');
-      return false;
     } catch (error) {
-      console.error('❌ Error saving to .db file:', error);
+      console.error('❌ Error saving to API:', error);
       return false;
     }
   }
 
   // Media Items
   getMediaItems(): MediaItem[] {
-    console.log('📖 Getting media items from enhanced .db file database:', this.data.media_items);
+    console.log('📖 Getting media items:', this.data.media_items);
     return [...(this.data.media_items || [])];
   }
 
@@ -186,17 +160,17 @@ class EnhancedFileDatabaseService {
       uploaded_at: new Date().toISOString()
     };
     
-    console.log('➕ Adding new media item to enhanced .db file database:', newItem);
+    console.log('➕ Adding new media item:', newItem);
     
     this.data.media_items = this.data.media_items || [];
     this.data.media_items.push(newItem);
     
     const saved = await this.saveToFile();
     if (saved) {
-      console.log('✅ Media item added successfully to enhanced .db file. Total items:', this.data.media_items.length);
+      console.log('✅ Media item added successfully. Total items:', this.data.media_items.length);
       return newItem;
     } else {
-      console.log('⚠️ Failed to save to .db file but keeping in memory');
+      console.log('⚠️ Failed to save but keeping in memory');
       return newItem;
     }
   }
@@ -209,7 +183,7 @@ class EnhancedFileDatabaseService {
     
     if (this.data.media_items.length < initialLength) {
       const saved = await this.saveToFile();
-      console.log(`✅ Media item ${id} deleted from enhanced .db file. Remaining items:`, this.data.media_items.length);
+      console.log(`✅ Media item ${id} deleted. Remaining items:`, this.data.media_items.length);
       return true;
     }
     return false;
@@ -227,17 +201,17 @@ class EnhancedFileDatabaseService {
       created_at: new Date().toISOString()
     };
     
-    console.log('➕ Adding new member to enhanced .db file database:', newMember);
+    console.log('➕ Adding new member:', newMember);
     
     this.data.members = this.data.members || [];
     this.data.members.push(newMember);
     
     const saved = await this.saveToFile();
     if (saved) {
-      console.log('✅ Member added successfully to enhanced .db file. Total members:', this.data.members.length);
+      console.log('✅ Member added successfully. Total members:', this.data.members.length);
       return newMember;
     } else {
-      console.log('⚠️ Failed to save to .db file but keeping in memory');
+      console.log('⚠️ Failed to save but keeping in memory');
       return newMember;
     }
   }
@@ -246,11 +220,11 @@ class EnhancedFileDatabaseService {
     const user = this.data.members?.find(m => 
       m.username === username && m.password_hash === password
     );
-    console.log('🔐 Enhanced .db file Database authentication for:', username, user ? 'SUCCESS' : 'FAILED');
+    console.log('🔐 Database authentication for:', username, user ? 'SUCCESS' : 'FAILED');
     return user || null;
   }
 
-  // Force reload from .db file
+  // Force reload from database
   async reloadFromStorage() {
     this.isInitialized = false;
     await this.initialize();
@@ -269,17 +243,7 @@ class EnhancedFileDatabaseService {
   async clearDatabase() {
     this.data = createDefaultDatabase();
     await this.saveToFile();
-    console.log('🗑️ Database cleared and reset to defaults in enhanced .db file');
-  }
-}
-
-// Declare global interface for browser handler
-declare global {
-  interface Window {
-    databaseHandler?: {
-      GET: () => any;
-      POST: (data: any) => { success: boolean };
-    };
+    console.log('🗑️ Database cleared and reset to defaults');
   }
 }
 
