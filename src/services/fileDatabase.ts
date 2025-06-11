@@ -27,7 +27,7 @@ interface Database {
   last_updated: string;
 }
 
-// Default data that gets saved to the database file
+// Default data with working image URLs
 const defaultDatabase: Database = {
   version: 1,
   last_updated: new Date().toISOString(),
@@ -35,10 +35,10 @@ const defaultDatabase: Database = {
     {
       id: 'default-1',
       type: 'photo',
-      cover_url: 'https://d3.indown.io/fetch?url=https%3A%2F%2Finstagram.fphl1-1.fna.fbcdn.net%2Fv%2Ft51.2885-15%2F504389281_18052496195579942_4563529490455079697_n.webp%3Fstp%3Ddst-jpg_e35_p1080x1080_sh0.08_tt6%26_nc_ht%3Dinstagram.fphl1-1.fna.fbcdn.net%26_nc_cat%3D102%26_nc_oc%3DQ6cZ2QGzIhwQ9i5z7KOQkFQjYR6izLZAyaU10EnhjlV-E-DDi0xtZgannBQzaUEOFgN53SQpyn9F2WwG8vKP9ilUUTme%26_nc_ohc%3DqNzQSp9R-hkQ7kNvwG_8Z3Q%26_nc_gid%3DCXRJ8MQ3z9NsJeH851vSKQ%26edm%3DANTKIIoBAAAA%26ccb%3D7-5%26oh%3D00_AfMzfqsiPfYVFq5rrr8xECVt3h57k3wwvaJfP2lHbi1i-g%26oe%3D684ED65B%26_nc_sid%3Dd885a2&is_download=0&expires=1749623127&link=https%3A%2F%2Fwww.instagram.com%2Fp%2FDKsByefCFI8%2F%3Fimg_index%3D1&signature=251d2e2e7de32c7adfac61c8d62d429bfbdc5b3899f0006e10f2c56cff1d010a',
+      cover_url: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&h=600&fit=crop',
       media_urls: [
-        'https://d3.indown.io/fetch?url=https%3A%2F%2Finstagram.fphl1-1.fna.fbcdn.net%2Fv%2Ft51.2885-15%2F504389281_18052496195579942_4563529490455079697_n.webp%3Fstp%3Ddst-jpg_e35_p1080x1080_sh0.08_tt6%26_nc_ht%3Dinstagram.fphl1-1.fna.fbcdn.net%26_nc_cat%3D102%26_nc_oc%3DQ6cZ2QGzIhwQ9i5z7KOQkFQjYR6izLZAyaU10EnhjlV-E-DDi0xtZgannBQzaUEOFgN53SQpyn9F2WwG8vKP9ilUUTme%26_nc_ohc%3DqNzQSp9R-hkQ7kNvwG_8Z3Q%26_nc_gid%3DCXRJ8MQ3z9NsJeH851vSKQ%26edm%3DANTKIIoBAAAA%26ccb%3D7-5%26oh%3D00_AfMzfqsiPfYVFq5rrr8xECVt3h57k3wwvaJfP2lHbi1i-g%26oe%3D684ED65B%26_nc_sid%3Dd885a2&is_download=0&expires=1749623127&link=https%3A%2F%2Fwww.instagram.com%2Fp%2FDKsByefCFI8%2F%3Fimg_index%3D1&signature=251d2e2e7de32c7adfac61c8d62d429bfbdc5b3899f0006e10f2c56cff1d010a',
-        'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=800&h=600&fit=crop'
+        'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&h=600&fit=crop',
+        'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&h=600&fit=crop'
       ],
       description: 'Professional portrait session capturing authentic moments',
       credits: ['Emma Martinez', 'Michael Chen'],
@@ -69,7 +69,6 @@ const defaultDatabase: Database = {
 class FileDatabaseService {
   private data: Database;
   private dbFileName = 'emm_database.db';
-  private dbUrl = `/api/database/${this.dbFileName}`;
 
   constructor() {
     this.data = { ...defaultDatabase };
@@ -80,21 +79,42 @@ class FileDatabaseService {
     try {
       console.log('Initializing file-based database system...');
       
-      // Try to load existing database file
-      const response = await fetch(this.dbUrl);
+      // Try to load from file first, then localStorage as absolute fallback
+      let loaded = false;
       
-      if (response.ok) {
-        const existingData = await response.json();
-        console.log('Loaded existing database file:', existingData);
-        this.data = existingData;
-      } else {
-        console.log('No existing database file found, creating new one...');
-        await this.saveDatabaseFile();
+      // Try file-based storage first
+      try {
+        const response = await fetch(`/api/database/${this.dbFileName}`);
+        if (response.ok) {
+          const existingData = await response.json();
+          console.log('Loaded database from file:', existingData);
+          this.data = existingData;
+          loaded = true;
+        }
+      } catch (fileError) {
+        console.log('File database not available, checking localStorage...');
+      }
+
+      // Only check localStorage if file loading failed
+      if (!loaded) {
+        const localData = localStorage.getItem('emm_database_v3');
+        if (localData) {
+          try {
+            this.data = JSON.parse(localData);
+            console.log('Loaded database from localStorage backup:', this.data);
+            // Try to migrate to file storage
+            await this.saveDatabaseFile();
+          } catch (e) {
+            console.log('localStorage data invalid, using defaults');
+          }
+        } else {
+          console.log('No existing database found, creating new one...');
+          await this.saveDatabaseFile();
+        }
       }
     } catch (error) {
       console.error('Error initializing database:', error);
-      console.log('Using default data and will try to save...');
-      await this.saveDatabaseFile();
+      console.log('Using default data');
     }
   }
 
@@ -103,37 +123,41 @@ class FileDatabaseService {
       this.data.last_updated = new Date().toISOString();
       this.data.version = (this.data.version || 0) + 1;
       
-      console.log('Saving database to file:', this.data);
+      console.log('Saving database to file system:', this.data);
       
-      // Save to server file system
-      const response = await fetch(this.dbUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(this.data)
-      });
+      // Try to save to file system first
+      try {
+        const response = await fetch(`/api/database/${this.dbFileName}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(this.data)
+        });
 
-      if (!response.ok) {
-        throw new Error(`Failed to save database: ${response.statusText}`);
+        if (response.ok) {
+          console.log('Database saved successfully to file system');
+          // Clear localStorage since file system is working
+          localStorage.removeItem('emm_database_v3');
+          return;
+        }
+      } catch (fileError) {
+        console.error('File system save failed:', fileError);
       }
 
-      console.log('Database saved successfully to file system');
-      
-      // Also backup in localStorage as fallback
-      localStorage.setItem('emm_db_backup', JSON.stringify(this.data));
+      // Only fallback to localStorage if file system fails
+      console.log('Falling back to localStorage...');
+      localStorage.setItem('emm_database_v3', JSON.stringify(this.data));
+      console.log('Database saved to localStorage as fallback');
       
     } catch (error) {
-      console.error('Error saving database file:', error);
-      // Fallback to localStorage if file system fails
-      localStorage.setItem('emm_database_v3', JSON.stringify(this.data));
-      console.log('Saved to localStorage as fallback');
+      console.error('Error saving database:', error);
     }
   }
 
   // Media Items
   getMediaItems(): MediaItem[] {
-    console.log('Getting media items from file database:', this.data.media_items);
+    console.log('Getting media items from database:', this.data.media_items);
     return [...(this.data.media_items || [])];
   }
 
@@ -144,7 +168,7 @@ class FileDatabaseService {
       uploaded_at: new Date().toISOString()
     };
     
-    console.log('Adding new media item to file database:', newItem);
+    console.log('Adding new media item to database:', newItem);
     
     if (!this.data.media_items) {
       this.data.media_items = [];
@@ -153,7 +177,7 @@ class FileDatabaseService {
     this.data.media_items.push(newItem);
     await this.saveDatabaseFile();
     
-    console.log('Media item added to file database. Total items:', this.data.media_items.length);
+    console.log('Media item added to database. Total items:', this.data.media_items.length);
     return newItem;
   }
 
@@ -165,7 +189,7 @@ class FileDatabaseService {
     
     if (this.data.media_items.length < initialLength) {
       await this.saveDatabaseFile();
-      console.log(`Media item ${id} deleted from file database. Remaining items:`, this.data.media_items.length);
+      console.log(`Media item ${id} deleted from database. Remaining items:`, this.data.media_items.length);
       return true;
     }
     return false;
@@ -183,7 +207,7 @@ class FileDatabaseService {
       created_at: new Date().toISOString()
     };
     
-    console.log('Adding new member to file database:', newMember);
+    console.log('Adding new member to database:', newMember);
     
     if (!this.data.members) {
       this.data.members = [];
@@ -192,7 +216,7 @@ class FileDatabaseService {
     this.data.members.push(newMember);
     await this.saveDatabaseFile();
     
-    console.log('Member added to file database. Total members:', this.data.members.length);
+    console.log('Member added to database. Total members:', this.data.members.length);
     return newMember;
   }
 
@@ -200,13 +224,13 @@ class FileDatabaseService {
     const user = this.data.members?.find(m => 
       m.username === username && m.password_hash === password
     );
-    console.log('File database authentication for:', username, user ? 'SUCCESS' : 'FAILED');
+    console.log('Database authentication for:', username, user ? 'SUCCESS' : 'FAILED');
     return user || null;
   }
 
   // Database management
   async clearDatabase() {
-    console.log('Clearing file database...');
+    console.log('Clearing database...');
     this.data = { ...defaultDatabase };
     await this.saveDatabaseFile();
   }
