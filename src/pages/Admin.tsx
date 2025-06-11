@@ -2,14 +2,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link, useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Save, Users, LogOut, Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
-import Navigation from "@/components/Navigation";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { LogOut, Upload, Users, Image, Video, Trash2, Plus } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface MediaItem {
   id: string;
@@ -18,207 +17,182 @@ interface MediaItem {
   media_urls: string[];
   description: string;
   credits: string[];
-  uploaded_by_user_id: string;
-  created_at: string;
+  uploaded_at: string;
 }
 
 interface User {
   id: string;
   username: string;
-  password_hash: string;
   default_credit_name: string;
   role: 'admin' | 'member';
   created_at: string;
 }
 
 const Admin = () => {
-  const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loginData, setLoginData] = useState({ username: "", password: "" });
-  const [showPassword, setShowPassword] = useState(false);
-
-  // States for media items
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<"media" | "users">("media");
+  
+  // Media state
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
-  const [newMediaItem, setNewMediaItem] = useState({ 
-    cover_url: "", 
-    type: "photo" as "photo" | "video",
-    description: "",
-    media_urls: [""],
-    credits: [""]
-  });
-
-  // States for users
+  const [loadingMedia, setLoadingMedia] = useState(true);
+  
+  // User state
   const [users, setUsers] = useState<User[]>([]);
-  const [newUser, setNewUser] = useState({ 
-    username: "", 
-    password: "", 
-    default_credit_name: "",
-    role: "member" as "admin" | "member"
-  });
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  
+  // Form states
+  const [newMediaType, setNewMediaType] = useState<'photo' | 'video'>('photo');
+  const [newMediaCoverUrl, setNewMediaCoverUrl] = useState("");
+  const [newMediaUrls, setNewMediaUrls] = useState("");
+  const [newMediaDescription, setNewMediaDescription] = useState("");
+  const [newMediaCredits, setNewMediaCredits] = useState("");
+  
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newCreditName, setNewCreditName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
 
-  // Loading states
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [isAddingMediaItem, setIsAddingMediaItem] = useState(false);
+  // Load media items
+  const loadMediaItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('media_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading media items:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load media items",
+        });
+      } else if (data) {
+        // Type-safe conversion from Supabase data to MediaItem
+        const typedMediaItems: MediaItem[] = data.map(item => ({
+          id: item.id,
+          type: item.type as 'photo' | 'video', // Type assertion since we control the data
+          cover_url: item.cover_url,
+          media_urls: item.media_urls || [],
+          description: item.description || '',
+          credits: item.credits || [],
+          uploaded_at: item.created_at || new Date().toISOString()
+        }));
+        setMediaItems(typedMediaItems);
+      }
+    } catch (error) {
+      console.error('Error loading media items:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load media items",
+      });
+    } finally {
+      setLoadingMedia(false);
+    }
+  };
+
+  // Load users
+  const loadUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading users:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load users",
+        });
+      } else if (data) {
+        // Type-safe conversion from Supabase data to User
+        const typedUsers: User[] = data.map(user => ({
+          id: user.id,
+          username: user.username,
+          default_credit_name: user.default_credit_name || '',
+          role: user.role as 'admin' | 'member',
+          created_at: user.created_at || new Date().toISOString()
+        }));
+        setUsers(typedUsers);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load users",
+      });
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   useEffect(() => {
-    // Check if already authenticated
-    const authStatus = localStorage.getItem('admin_authenticated');
-    const storedUser = localStorage.getItem('admin_current_user');
-    if (authStatus === 'true' && storedUser) {
-      const userData = JSON.parse(storedUser);
-      setIsAuthenticated(true);
-      setCurrentUser(userData);
-      loadData();
-    }
+    loadMediaItems();
+    loadUsers();
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleAddMedia = async () => {
+    if (!newMediaCoverUrl || !newMediaDescription) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please fill in all required fields",
+      });
+      return;
+    }
+
     try {
-      // Query Supabase users table for authentication
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', loginData.username)
-        .eq('password_hash', loginData.password)
+      const { data, error } = await supabase
+        .from('media_items')
+        .insert({
+          type: newMediaType,
+          cover_url: newMediaCoverUrl,
+          media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
+          description: newMediaDescription,
+          credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
+          uploaded_by_user_id: user?.id || ''
+        })
+        .select()
         .single();
-      
-      if (error || !user) {
-        toast.error("Invalid credentials");
-        return;
-      }
-
-      setIsAuthenticated(true);
-      setCurrentUser(user);
-      localStorage.setItem('admin_authenticated', 'true');
-      localStorage.setItem('admin_current_user', JSON.stringify(user));
-      loadData();
-      toast.success(`Welcome ${user.role === 'admin' ? 'to admin panel' : 'back'}!`);
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error("Login failed");
-    }
-  };
-
-  const handleSignOut = () => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    localStorage.removeItem('admin_authenticated');
-    localStorage.removeItem('admin_current_user');
-    navigate('/');
-  };
-
-  const loadData = async () => {
-    try {
-      // Load media items from Supabase
-      const { data: mediaData, error: mediaError } = await supabase
-        .from('media_items')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (mediaError) {
-        console.error('Error loading media items:', mediaError);
-      } else {
-        setMediaItems(mediaData || []);
-      }
-
-      // Load users from Supabase
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (usersError) {
-        console.error('Error loading users:', usersError);
-      } else {
-        setUsers(usersData || []);
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-    }
-  };
-
-  const addMediaItem = async () => {
-    if (!newMediaItem.cover_url || !currentUser) {
-      toast.error("Cover URL is required");
-      return;
-    }
-
-    setIsAddingMediaItem(true);
-    
-    try {
-      const { data, error } = await supabase
-        .from('media_items')
-        .insert([{
-          type: newMediaItem.type,
-          cover_url: newMediaItem.cover_url,
-          description: newMediaItem.description,
-          media_urls: newMediaItem.media_urls.filter(url => url.trim() !== ""),
-          credits: newMediaItem.credits.filter(credit => credit.trim() !== ""),
-          uploaded_by_user_id: currentUser.id
-        }])
-        .select();
 
       if (error) {
-        console.error('Error adding media item:', error);
-        toast.error("Failed to add media item");
-      } else {
-        toast.success("Media item added successfully");
-        setNewMediaItem({ 
-          cover_url: "", 
-          type: "photo",
-          description: "",
-          media_urls: [""],
-          credits: [""]
+        console.error('Error adding media:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to add media item",
         });
-        loadData();
-      }
-    } catch (error) {
-      console.error('Error adding media item:', error);
-      toast.error("Failed to add media item");
-    } finally {
-      setIsAddingMediaItem(false);
-    }
-  };
-
-  const createUser = async () => {
-    if (!newUser.username || !newUser.password) {
-      toast.error("Username and password are required");
-      return;
-    }
-
-    setIsCreatingUser(true);
-    
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .insert([{
-          username: newUser.username,
-          password_hash: newUser.password,
-          default_credit_name: newUser.default_credit_name || newUser.username,
-          role: newUser.role
-        }])
-        .select();
-
-      if (error) {
-        console.error('Error creating user:', error);
-        toast.error("Failed to create user account");
       } else {
-        toast.success("User account created successfully");
-        setNewUser({ username: "", password: "", default_credit_name: "", role: "member" });
-        loadData();
+        toast({
+          title: "Success",
+          description: "Media item added successfully",
+        });
+        
+        // Reset form
+        setNewMediaCoverUrl("");
+        setNewMediaUrls("");
+        setNewMediaDescription("");
+        setNewMediaCredits("");
+        
+        // Reload media items
+        loadMediaItems();
       }
     } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error("Failed to create user account");
-    } finally {
-      setIsCreatingUser(false);
+      console.error('Error adding media:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add media item",
+      });
     }
   };
 
-  const deleteMediaItem = async (id: string) => {
+  const handleDeleteMedia = async (id: string) => {
     try {
       const { error } = await supabase
         .from('media_items')
@@ -226,353 +200,344 @@ const Admin = () => {
         .eq('id', id);
 
       if (error) {
-        console.error('Error deleting media item:', error);
-        toast.error("Failed to delete media item");
+        console.error('Error deleting media:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to delete media item",
+        });
       } else {
-        toast.success("Media item deleted successfully");
-        loadData();
+        toast({
+          title: "Success",
+          description: "Media item deleted successfully",
+        });
+        loadMediaItems();
       }
     } catch (error) {
-      console.error('Error deleting media item:', error);
-      toast.error("Failed to delete media item");
+      console.error('Error deleting media:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete media item",
+      });
     }
   };
 
-  // Helper functions for dynamic fields
-  const addMediaUrl = () => {
-    setNewMediaItem(prev => ({
-      ...prev,
-      media_urls: [...prev.media_urls, ""]
-    }));
+  const handleAddUser = async () => {
+    if (!newUsername || !newPassword) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please fill in username and password",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          username: newUsername,
+          password_hash: newPassword, // In production, this should be properly hashed
+          default_credit_name: newCreditName,
+          role: newUserRole
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding user:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to add user",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "User added successfully",
+        });
+        
+        // Reset form
+        setNewUsername("");
+        setNewPassword("");
+        setNewCreditName("");
+        setNewUserRole('member');
+        
+        // Reload users
+        loadUsers();
+      }
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add user",
+      });
+    }
   };
 
-  const updateMediaUrl = (index: number, value: string) => {
-    setNewMediaItem(prev => ({
-      ...prev,
-      media_urls: prev.media_urls.map((url, i) => i === index ? value : url)
-    }));
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed out",
+      description: "You have been signed out successfully",
+    });
   };
-
-  const removeMediaUrl = (index: number) => {
-    setNewMediaItem(prev => ({
-      ...prev,
-      media_urls: prev.media_urls.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addCredit = () => {
-    setNewMediaItem(prev => ({
-      ...prev,
-      credits: [...prev.credits, ""]
-    }));
-  };
-
-  const updateCredit = (index: number, value: string) => {
-    setNewMediaItem(prev => ({
-      ...prev,
-      credits: prev.credits.map((credit, i) => i === index ? value : credit)
-    }));
-  };
-
-  const removeCredit = (index: number) => {
-    setNewMediaItem(prev => ({
-      ...prev,
-      credits: prev.credits.filter((_, i) => i !== index)
-    }));
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">Login</CardTitle>
-            <p className="text-center text-sm text-muted-foreground">
-              Admin or Member Access
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <Input
-                placeholder="Username"
-                value={loginData.username}
-                onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                required
-              />
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              <Button type="submit" className="w-full">
-                Login
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const isAdmin = currentUser?.role === 'admin';
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="text-2xl font-bold tracking-tight">
-              EMM
-            </Link>
-            <div className="flex items-center gap-4">
-              <Navigation />
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {currentUser?.username} ({currentUser?.role})
-                </span>
-                <Button variant="outline" onClick={handleSignOut} className="flex items-center gap-2">
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </Button>
-              </div>
-            </div>
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Welcome back, {user?.username}</p>
           </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="text-center mb-16">
-          <h1 className="text-6xl font-light tracking-tight mb-6">
-            {isAdmin ? 'Admin Panel' : 'Member Panel'}
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {isAdmin ? 'Manage your media content and team members' : 'Manage your media content'}
-          </p>
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
         </div>
 
-        <Tabs defaultValue="media" className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            <TabsTrigger value="media">Media Items</TabsTrigger>
-            {isAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
-          </TabsList>
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8">
+          <Button
+            variant={activeTab === "media" ? "default" : "outline"}
+            onClick={() => setActiveTab("media")}
+          >
+            <Image className="h-4 w-4 mr-2" />
+            Media Management
+          </Button>
+          <Button
+            variant={activeTab === "users" ? "default" : "outline"}
+            onClick={() => setActiveTab("users")}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            User Management
+          </Button>
+        </div>
 
-          <TabsContent value="media" className="space-y-8">
-            
+        {/* Media Management Tab */}
+        {activeTab === "media" && (
+          <div className="space-y-6">
+            {/* Add Media Form */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  Add New Media Item
+                  <Upload className="h-5 w-5" />
+                  Add New Media
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Input
-                  placeholder="Cover URL"
-                  value={newMediaItem.cover_url}
-                  onChange={(e) => setNewMediaItem({ ...newMediaItem, cover_url: e.target.value })}
-                />
-                <select
-                  className="w-full p-2 border rounded-md"
-                  value={newMediaItem.type}
-                  onChange={(e) => setNewMediaItem({ ...newMediaItem, type: e.target.value as "photo" | "video" })}
-                >
-                  <option value="photo">Photo</option>
-                  <option value="video">Video</option>
-                </select>
-                <Textarea
-                  placeholder="Description (max 200 characters)"
-                  value={newMediaItem.description}
-                  maxLength={200}
-                  onChange={(e) => setNewMediaItem({ ...newMediaItem, description: e.target.value })}
-                />
-                
-                <div>
-                  <label className="text-sm font-medium">Media URLs:</label>
-                  {newMediaItem.media_urls.map((url, index) => (
-                    <div key={index} className="flex gap-2 mt-2">
-                      <Input
-                        placeholder="Media URL"
-                        value={url}
-                        onChange={(e) => updateMediaUrl(index, e.target.value)}
-                      />
-                      {newMediaItem.media_urls.length > 1 && (
-                        <Button type="button" variant="outline" onClick={() => removeMediaUrl(index)}>
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" onClick={addMediaUrl} className="mt-2">
-                    Add Media URL
-                  </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Type</label>
+                    <select
+                      value={newMediaType}
+                      onChange={(e) => setNewMediaType(e.target.value as 'photo' | 'video')}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="photo">Photo</option>
+                      <option value="video">Video</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Cover URL *</label>
+                    <Input
+                      placeholder="https://example.com/image.jpg"
+                      value={newMediaCoverUrl}
+                      onChange={(e) => setNewMediaCoverUrl(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Media URLs (comma separated)</label>
+                    <Input
+                      placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
+                      value={newMediaUrls}
+                      onChange={(e) => setNewMediaUrls(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description *</label>
+                    <Input
+                      placeholder="Description of the media"
+                      value={newMediaDescription}
+                      onChange={(e) => setNewMediaDescription(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-medium">Credits (comma separated)</label>
+                    <Input
+                      placeholder="John Doe, Jane Smith"
+                      value={newMediaCredits}
+                      onChange={(e) => setNewMediaCredits(e.target.value)}
+                    />
+                  </div>
                 </div>
-
-                <div>
-                  <label className="text-sm font-medium">Credits:</label>
-                  {newMediaItem.credits.map((credit, index) => (
-                    <div key={index} className="flex gap-2 mt-2">
-                      <Input
-                        placeholder="Credit name"
-                        value={credit}
-                        onChange={(e) => updateCredit(index, e.target.value)}
-                      />
-                      {newMediaItem.credits.length > 1 && (
-                        <Button type="button" variant="outline" onClick={() => removeCredit(index)}>
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" onClick={addCredit} className="mt-2">
-                    Add Credit
-                  </Button>
-                </div>
-
-                <Button 
-                  onClick={addMediaItem} 
-                  disabled={isAddingMediaItem}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isAddingMediaItem ? "Adding..." : "Add Media Item"}
+                <Button onClick={handleAddMedia} className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Media
                 </Button>
               </CardContent>
             </Card>
 
-            <div className="grid gap-4">
-              {mediaItems.map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold mb-2">
-                          {item.type.charAt(0).toUpperCase() + item.type.slice(1)} Item
-                        </h3>
-                        <p className="text-muted-foreground mb-2">{item.description}</p>
-                        <p className="text-sm text-muted-foreground mb-2">Cover: {item.cover_url}</p>
-                        {item.media_urls && item.media_urls.length > 0 && (
-                          <div className="mt-2">
-                            <p className="text-sm text-muted-foreground mb-1">Media URLs ({item.media_urls.length}):</p>
-                            <div className="text-xs text-muted-foreground">
-                              {item.media_urls.slice(0, 2).map((url, index) => (
-                                <div key={index} className="truncate">{url}</div>
-                              ))}
-                              {item.media_urls.length > 2 && (
-                                <div>... and {item.media_urls.length - 2} more</div>
-                              )}
-                            </div>
+            {/* Media List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Existing Media</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingMedia ? (
+                  <div className="text-center py-8">Loading media...</div>
+                ) : mediaItems.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No media items found</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {mediaItems.map((item) => (
+                      <div key={item.id} className="border rounded-lg p-4">
+                        <div className="aspect-video bg-muted rounded-lg mb-4 overflow-hidden">
+                          <img
+                            src={item.cover_url}
+                            alt={item.description}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Badge variant={item.type === 'photo' ? 'default' : 'secondary'}>
+                              {item.type === 'photo' ? <Image className="h-3 w-3 mr-1" /> : <Video className="h-3 w-3 mr-1" />}
+                              {item.type}
+                            </Badge>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Media</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this media item? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteMedia(item.id)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
-                        )}
-                        {item.credits && item.credits.length > 0 && (
-                          <div className="mt-2">
-                            <p className="text-sm text-muted-foreground mb-1">Credits:</p>
-                            <p className="text-sm text-muted-foreground">{item.credits.join(', ')}</p>
-                          </div>
-                        )}
+                          <p className="text-sm font-medium">{item.description}</p>
+                          {item.credits.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              Credits: {item.credits.join(', ')}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
-                          onClick={() => deleteMediaItem(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-          {isAdmin && (
-            <TabsContent value="users" className="space-y-8">
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Create New User Account
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Input
-                    placeholder="Username"
-                    value={newUser.username}
-                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Password (minimum 6 characters)"
-                    type="password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Default Credit Name (optional)"
-                    value={newUser.default_credit_name}
-                    onChange={(e) => setNewUser({ ...newUser, default_credit_name: e.target.value })}
-                  />
-                  <select
-                    className="w-full p-2 border rounded-md"
-                    value={newUser.role}
-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value as "admin" | "member" })}
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <Button 
-                    onClick={createUser} 
-                    disabled={isCreatingUser}
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {isCreatingUser ? "Creating..." : "Create User"}
-                  </Button>
-                </CardContent>
-              </Card>
+        {/* User Management Tab */}
+        {activeTab === "users" && (
+          <div className="space-y-6">
+            {/* Add User Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Add New User
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Username *</label>
+                    <Input
+                      placeholder="username"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Password *</label>
+                    <Input
+                      type="password"
+                      placeholder="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Default Credit Name</label>
+                    <Input
+                      placeholder="Display name for credits"
+                      value={newCreditName}
+                      onChange={(e) => setNewCreditName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Role</label>
+                    <select
+                      value={newUserRole}
+                      onChange={(e) => setNewUserRole(e.target.value as 'admin' | 'member')}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                </div>
+                <Button onClick={handleAddUser} className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add User
+                </Button>
+              </CardContent>
+            </Card>
 
-              <div className="grid gap-4">
-                {users.map((user) => (
-                  <Card key={user.id}>
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
+            {/* Users List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Existing Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingUsers ? (
+                  <div className="text-center py-8">Loading users...</div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No users found</div>
+                ) : (
+                  <div className="space-y-4">
+                    {users.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
-                          <h3 className="text-xl font-semibold mb-2">{user.username}</h3>
-                          <p className="text-muted-foreground mb-1">Default Credit: {user.default_credit_name || 'Not set'}</p>
-                          <p className="text-muted-foreground">Role: {user.role}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="font-medium">{user.username}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {user.default_credit_name || 'No credit name set'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
                             Created: {new Date(user.created_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                          {user.role}
+                        </Badge>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-          )}
-        </Tabs>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
