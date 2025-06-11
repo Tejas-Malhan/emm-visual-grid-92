@@ -44,8 +44,24 @@ const Index = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero Section with Creative Background */}
       <section className="relative overflow-hidden">
+        {/* Creative Background Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-10 left-10 w-20 h-20 bg-primary/10 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute top-32 right-20 w-32 h-32 bg-secondary/15 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute bottom-20 left-32 w-24 h-24 bg-primary/5 rounded-full blur-xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-secondary/10 rounded-full blur-lg animate-bounce" style={{ animationDelay: '0.5s' }}></div>
+          <div className="absolute bottom-32 right-32 w-28 h-28 bg-primary/8 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        </div>
+        
+        {/* Geometric Shapes */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-24 right-1/4 w-8 h-8 border-2 border-primary/20 rotate-45 animate-spin" style={{ animationDuration: '8s' }}></div>
+          <div className="absolute bottom-40 left-1/3 w-6 h-6 bg-secondary/20 transform rotate-12 animate-bounce" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-1/3 right-20 w-4 h-4 bg-primary/30 rounded-full animate-ping" style={{ animationDelay: '2s' }}></div>
+        </div>
+
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
         <div className="relative max-w-6xl mx-auto px-6 py-24 md:py-32">
           <div className="text-center space-y-8 animate-fade-in">

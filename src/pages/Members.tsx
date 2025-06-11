@@ -1,29 +1,27 @@
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Camera, Video, Instagram, Mail } from "lucide-react";
+import { Camera, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
-import { supabase } from "@/integrations/supabase/client";
+import { db, Member } from "@/services/database";
 
 const Members = () => {
-  const [members, setMembers] = useState([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadMembers = async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
+      try {
+        const membersList = db.getMembers();
+        // Filter out admin from public display
+        const publicMembers = membersList.filter(member => member.role !== 'admin');
+        setMembers(publicMembers);
+      } catch (error) {
         console.error('Error loading members:', error);
-      } else {
-        setMembers(data || []);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     loadMembers();
@@ -87,7 +85,7 @@ const Members = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {members.map((member: any) => (
+              {members.map((member) => (
                 <div key={member.id} className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow">
                   <div className="aspect-square bg-muted rounded-lg overflow-hidden mb-4">
                     <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/20 flex items-center justify-center">
@@ -101,10 +99,10 @@ const Members = () => {
                   </Badge>
                   
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Mail className="mr-2 h-4 w-4" />
+                    <button className="flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">
+                      <Mail className="h-4 w-4" />
                       Contact
-                    </Button>
+                    </button>
                   </div>
                 </div>
               ))}
