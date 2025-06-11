@@ -1,3 +1,3 @@
 
-// Updated database service that uses the FIXED localStorage-based system
-export { newFileDb as db, type MediaItem, type Member } from './fileDatabase';
+// Updated database service that uses SQLite3
+export { sqliteDb as db, type MediaItem, type Member } from './sqliteDatabase';

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { Link } from "react-router-dom";
 import { Play } from "lucide-react";
-import { newFileDb, MediaItem } from "@/services/fileDatabase";
+import { sqliteDb, MediaItem } from "@/services/sqliteDatabase";
 
 const Videos = () => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -15,13 +15,13 @@ const Videos = () => {
   useEffect(() => {
     const loadMedia = async () => {
       try {
-        console.log('🎥 Loading video media from FIXED localStorage database...');
-        await newFileDb.reloadFromStorage();
-        const items = newFileDb.getMediaItems().filter(item => item.type === 'video');
-        console.log('✅ Video items loaded from FIXED localStorage database:', items);
+        console.log('🎥 Loading video media from SQLite database...');
+        await sqliteDb.reloadFromStorage();
+        const items = sqliteDb.getMediaItems().filter(item => item.type === 'video');
+        console.log('✅ Video items loaded from SQLite database:', items);
         setMediaItems(items);
       } catch (error) {
-        console.error('❌ Error loading video items from FIXED localStorage database:', error);
+        console.error('❌ Error loading video items from SQLite database:', error);
       } finally {
         setLoading(false);
       }
@@ -57,7 +57,7 @@ const Videos = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-xl">Loading videos from FIXED localStorage database...</div>
+            <div className="text-xl">Loading videos from SQLite database...</div>
           </div>
         ) : mediaItems.length === 0 ? (
           <div className="text-center py-12">

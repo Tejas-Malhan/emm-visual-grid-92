@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { newFileDb, MediaItem, Member } from "@/services/fileDatabase";
+import { sqliteDb, MediaItem, Member } from "@/services/sqliteDatabase";
 import { LogOut, Upload, Users, Image, Video, Trash2, Plus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -36,41 +35,41 @@ const Admin = () => {
   const [newInstagramHandle, setNewInstagramHandle] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
 
-  // Load media items from .db file database
+  // Load media items from SQLite database
   const loadMediaItems = async () => {
     try {
-      console.log('Loading media items from .db file database...');
-      await newFileDb.reloadFromStorage();
-      const items = newFileDb.getMediaItems();
-      console.log('Loaded media items from .db file database:', items);
+      console.log('Loading media items from SQLite database...');
+      await sqliteDb.reloadFromStorage();
+      const items = sqliteDb.getMediaItems();
+      console.log('Loaded media items from SQLite database:', items);
       setMediaItems(items);
     } catch (error) {
-      console.error('Error loading media items from .db file database:', error);
+      console.error('Error loading media items from SQLite database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load media items from .db file database",
+        description: "Failed to load media items from SQLite database",
       });
     } finally {
       setLoadingMedia(false);
     }
   };
 
-  // Load users from .db file database (only for admins)
+  // Load users from SQLite database (only for admins)
   const loadUsers = async () => {
     if (userRole !== 'admin') return;
     
     try {
-      await newFileDb.reloadFromStorage();
-      const members = newFileDb.getMembers();
-      console.log('Loaded members from .db file database:', members);
+      await sqliteDb.reloadFromStorage();
+      const members = sqliteDb.getMembers();
+      console.log('Loaded members from SQLite database:', members);
       setUsers(members);
     } catch (error) {
-      console.error('Error loading users from .db file database:', error);
+      console.error('Error loading users from SQLite database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load users from .db file database",
+        description: "Failed to load users from SQLite database",
       });
     } finally {
       setLoadingUsers(false);
@@ -95,7 +94,7 @@ const Admin = () => {
     }
 
     try {
-      console.log('Adding media to .db file database with data:', {
+      console.log('Adding media to SQLite database with data:', {
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
@@ -108,7 +107,7 @@ const Admin = () => {
         ? newMediaUrls.split(',').map(url => url.trim()).filter(url => url)
         : [newMediaCoverUrl];
 
-      const newItem = await newFileDb.addMediaItem({
+      const newItem = await sqliteDb.addMediaItem({
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: mediaUrls,
@@ -116,11 +115,11 @@ const Admin = () => {
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
 
-      console.log('Added media item to .db file database:', newItem);
+      console.log('Added media item to SQLite database:', newItem);
 
       toast({
         title: "Success",
-        description: "Media item saved to .db file database successfully",
+        description: "Media item saved to SQLite database successfully",
       });
       
       // Reset form
@@ -132,38 +131,38 @@ const Admin = () => {
       // Reload media items
       await loadMediaItems();
     } catch (error) {
-      console.error('Error adding media to .db file database:', error);
+      console.error('Error adding media to SQLite database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add media item to .db file database",
+        description: "Failed to add media item to SQLite database",
       });
     }
   };
 
   const handleDeleteMedia = async (id: string) => {
     try {
-      const success = await newFileDb.deleteMediaItem(id);
+      const success = await sqliteDb.deleteMediaItem(id);
       
       if (success) {
         toast({
           title: "Success",
-          description: "Media item deleted from .db file database successfully",
+          description: "Media item deleted from SQLite database successfully",
         });
         loadMediaItems();
       } else {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to delete media item from .db file database",
+          description: "Failed to delete media item from SQLite database",
         });
       }
     } catch (error) {
-      console.error('Error deleting media from .db file database:', error);
+      console.error('Error deleting media from SQLite database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete media item from .db file database",
+        description: "Failed to delete media item from SQLite database",
       });
     }
   };
@@ -179,7 +178,7 @@ const Admin = () => {
     }
 
     try {
-      const newUser = await newFileDb.addMember({
+      const newUser = await sqliteDb.addMember({
         username: newUsername,
         password_hash: newPassword,
         default_credit_name: newCreditName,
@@ -187,11 +186,11 @@ const Admin = () => {
         role: newUserRole
       });
 
-      console.log('Added user to .db file database:', newUser);
+      console.log('Added user to SQLite database:', newUser);
 
       toast({
         title: "Success",
-        description: "User saved to .db file database successfully",
+        description: "User saved to SQLite database successfully",
       });
       
       // Reset form
@@ -204,11 +203,11 @@ const Admin = () => {
       // Reload users
       loadUsers();
     } catch (error) {
-      console.error('Error adding user to .db file database:', error);
+      console.error('Error adding user to SQLite database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add user to .db file database",
+        description: "Failed to add user to SQLite database",
       });
     }
   };
@@ -222,7 +221,7 @@ const Admin = () => {
   };
 
   const isAdmin = userRole === 'admin';
-  const dbStats = newFileDb.getDatabaseStats();
+  const dbStats = sqliteDb.getDatabaseStats();
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -235,7 +234,7 @@ const Admin = () => {
             </h1>
             <p className="text-muted-foreground">Welcome back, {user?.username}</p>
             <p className="text-xs text-muted-foreground">
-              .db File Database | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
+              SQLite Database | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
             </p>
           </div>
           <Button variant="outline" onClick={handleSignOut}>
@@ -272,7 +271,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Add New Media (.db File Database)
+                  Add New Media (SQLite Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -323,7 +322,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddMedia} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Media to .db File Database
+                  Add Media to SQLite Database
                 </Button>
               </CardContent>
             </Card>
@@ -331,13 +330,13 @@ const Admin = () => {
             {/* Media List */}
             <Card>
               <CardHeader>
-                <CardTitle>.db File Database Media ({mediaItems.length})</CardTitle>
+                <CardTitle>SQLite Database Media ({mediaItems.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingMedia ? (
-                  <div className="text-center py-8">Loading media from .db file database...</div>
+                  <div className="text-center py-8">Loading media from SQLite database...</div>
                 ) : mediaItems.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No media items found in .db file database</div>
+                  <div className="text-center py-8 text-muted-foreground">No media items found in SQLite database</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {mediaItems.map((item) => (
@@ -367,7 +366,7 @@ const Admin = () => {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Media</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete this media item from the .db file database? This action cannot be undone.
+                                      Are you sure you want to delete this media item from the SQLite database? This action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -404,7 +403,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Plus className="h-5 w-5" />
-                  Add New User (.db File Database)
+                  Add New User (SQLite Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -456,7 +455,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddUser} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add User to .db File Database
+                  Add User to SQLite Database
                 </Button>
               </CardContent>
             </Card>
@@ -464,13 +463,13 @@ const Admin = () => {
             {/* Users List */}
             <Card>
               <CardHeader>
-                <CardTitle>.db File Database Users</CardTitle>
+                <CardTitle>SQLite Database Users</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingUsers ? (
-                  <div className="text-center py-8">Loading users from .db file database...</div>
+                  <div className="text-center py-8">Loading users from SQLite database...</div>
                 ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No users found in .db file database</div>
+                  <div className="text-center py-8 text-muted-foreground">No users found in SQLite database</div>
                 ) : (
                   <div className="space-y-4">
                     {users.map((user) => (

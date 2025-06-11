@@ -12,12 +12,15 @@ const Members = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadMembers = () => {
+    const loadMembers = async () => {
       try {
+        console.log('Loading members from SQLite database...');
+        await db.reloadFromStorage();
         const allMembers = db.getMembers();
+        console.log('Loaded members from SQLite database:', allMembers);
         setMembers(allMembers);
       } catch (error) {
-        console.error('Error loading members:', error);
+        console.error('Error loading members from SQLite database:', error);
       } finally {
         setLoading(false);
       }
@@ -53,7 +56,7 @@ const Members = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-xl">Loading team members...</div>
+            <div className="text-xl">Loading team members from SQLite database...</div>
           </div>
         ) : members.length === 0 ? (
           <div className="text-center py-12">
