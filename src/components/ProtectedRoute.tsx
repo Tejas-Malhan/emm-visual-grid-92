@@ -12,12 +12,20 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
   const { user, userRole, loading } = useAuth();
   const navigate = useNavigate();
 
+  console.log('ProtectedRoute state:', { user, userRole, loading, requireAdmin });
+
   useEffect(() => {
     if (!loading) {
+      console.log('ProtectedRoute check:', { user: !!user, userRole, requireAdmin });
+      
       if (!user) {
+        console.log('No user, redirecting to auth');
         navigate('/auth');
       } else if (requireAdmin && userRole !== 'admin') {
+        console.log('User not admin, redirecting to home');
         navigate('/');
+      } else {
+        console.log('Access granted');
       }
     }
   }, [user, userRole, loading, navigate, requireAdmin]);

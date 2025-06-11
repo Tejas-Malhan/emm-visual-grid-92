@@ -30,31 +30,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Check if user is already logged in (from localStorage)
     const storedUser = localStorage.getItem('currentUser');
+    console.log('Stored user:', storedUser);
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
       setSession({ user: userData });
       setUserRole(userData.role);
+      console.log('Restored user session:', userData);
     }
     setLoading(false);
   }, []);
 
   const signIn = async (username: string, password: string) => {
+    console.log('Attempting sign in with:', username, password);
+    
     try {
-      // Simple password verification (in production, use proper hashing)
+      // Query the custom users table
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('username', username)
         .single();
 
-      if (error || !data) {
+      console.log('Database query result:', { data, error });
+
+      if (error) {
+        console.error('Database error:', error);
         return { error: { message: 'Invalid username or password' } };
       }
 
-      // For demo purposes, we'll accept any password that matches the placeholder pattern
-      // In production, you'd use bcrypt to compare hashed passwords
-      const isValidPassword = data.password_hash.includes(password) || password === 'admin';
+      if (!data) {
+        console.log('No user found');
+        return { error: { message: 'Invalid username or password' } };
+      }
+
+      // Simple password check - in production you'd use proper hashing
+      const isValidPassword = password === 'admin' || data.password_hash === password;
+      
+      console.log('Password validation:', isValidPassword, 'Expected:', data.password_hash, 'Provided:', password);
 
       if (!isValidPassword) {
         return { error: { message: 'Invalid username or password' } };
@@ -67,6 +80,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         role: data.role,
         default_credit_name: data.default_credit_name
       };
+
+      console.log('Setting user data:', userData);
 
       setUser(userData);
       setSession({ user: userData });
@@ -83,6 +98,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
+    console.log('Signing out user');
     setUser(null);
     setSession(null);
     setUserRole(null);
