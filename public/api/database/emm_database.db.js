@@ -73,101 +73,86 @@ function saveStoredData(data) {
   }
 }
 
-// Main handler function
-function handleRequest(method, url, body) {
-  console.log('🗄️ SQLite Database API Request:', method, url);
+// This will be called by the browser when accessing the endpoint
+if (typeof window !== 'undefined') {
+  // Browser environment - intercept fetch requests
+  const originalFetch = window.fetch;
   
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json'
+  window.fetch = function(url, options = {}) {
+    if (typeof url === 'string' && url.includes('/api/database/emm_database.db.js')) {
+      console.log('🗄️ Intercepted database API request:', options.method, url);
+      
+      const method = options.method || 'GET';
+      const body = options.body || '';
+      
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Content-Type': 'application/json'
+      };
+      
+      if (method === 'OPTIONS') {
+        return Promise.resolve(new Response(null, { status: 200, headers }));
+      }
+      
+      if (method === 'GET') {
+        const data = getStoredData();
+        console.log('✅ SQLite GET response:', data);
+        return Promise.resolve(new Response(JSON.stringify(data), { status: 200, headers }));
+      }
+      
+      if (method === 'POST') {
+        try {
+          const requestData = JSON.parse(body);
+          const { action, item, member, id } = requestData;
+          const data = getStoredData();
+          
+          if (action === 'add_media' && item) {
+            data.media_items = data.media_items || [];
+            data.media_items.push(item);
+            data.last_updated = new Date().toISOString();
+            data.version++;
+            
+            saveStoredData(data);
+            console.log('✅ Added media item to SQLite:', item.id);
+            return Promise.resolve(new Response(JSON.stringify({ success: true, id: item.id }), { status: 200, headers }));
+          }
+          
+          if (action === 'delete_media' && id) {
+            data.media_items = data.media_items.filter(mediaItem => mediaItem.id !== id);
+            data.last_updated = new Date().toISOString();
+            data.version++;
+            
+            saveStoredData(data);
+            console.log('✅ Deleted media item from SQLite:', id);
+            return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200, headers }));
+          }
+          
+          if (action === 'add_member' && member) {
+            data.members = data.members || [];
+            data.members.push(member);
+            data.last_updated = new Date().toISOString();
+            data.version++;
+            
+            saveStoredData(data);
+            console.log('✅ Added member to SQLite:', member.id);
+            return Promise.resolve(new Response(JSON.stringify({ success: true, id: member.id }), { status: 200, headers }));
+          }
+          
+          return Promise.resolve(new Response(JSON.stringify({ error: 'Invalid action or missing data' }), { status: 400, headers }));
+        } catch (error) {
+          console.error('❌ Error parsing POST data:', error);
+          return Promise.resolve(new Response(JSON.stringify({ error: 'Invalid JSON data' }), { status: 400, headers }));
+        }
+      }
+      
+      return Promise.resolve(new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers }));
+    }
+    
+    // For all other requests, use the original fetch
+    return originalFetch.apply(this, arguments);
   };
   
-  if (method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers });
-  }
-  
-  if (method === 'GET') {
-    const data = getStoredData();
-    console.log('✅ SQLite GET response:', data);
-    return new Response(JSON.stringify(data), { status: 200, headers });
-  }
-  
-  if (method === 'POST') {
-    try {
-      const requestData = JSON.parse(body);
-      const { action, item, member, id } = requestData;
-      const data = getStoredData();
-      
-      if (action === 'add_media' && item) {
-        data.media_items = data.media_items || [];
-        data.media_items.push(item);
-        data.last_updated = new Date().toISOString();
-        data.version++;
-        
-        saveStoredData(data);
-        console.log('✅ Added media item to SQLite:', item.id);
-        return new Response(JSON.stringify({ success: true, id: item.id }), { status: 200, headers });
-      }
-      
-      if (action === 'delete_media' && id) {
-        data.media_items = data.media_items.filter(mediaItem => mediaItem.id !== id);
-        data.last_updated = new Date().toISOString();
-        data.version++;
-        
-        saveStoredData(data);
-        console.log('✅ Deleted media item from SQLite:', id);
-        return new Response(JSON.stringify({ success: true }), { status: 200, headers });
-      }
-      
-      if (action === 'add_member' && member) {
-        data.members = data.members || [];
-        data.members.push(member);
-        data.last_updated = new Date().toISOString();
-        data.version++;
-        
-        saveStoredData(data);
-        console.log('✅ Added member to SQLite:', member.id);
-        return new Response(JSON.stringify({ success: true, id: member.id }), { status: 200, headers });
-      }
-      
-      return new Response(JSON.stringify({ error: 'Invalid action or missing data' }), { status: 400, headers });
-    } catch (error) {
-      console.error('❌ Error parsing POST data:', error);
-      return new Response(JSON.stringify({ error: 'Invalid JSON data' }), { status: 400, headers });
-    }
-  }
-  
-  return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
-}
-
-// Export for different environments
-if (typeof module !== 'undefined' && module.exports) {
-  // Node.js environment
-  module.exports = function handler(req, res) {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      const response = handleRequest(req.method, req.url, body);
-      res.writeHead(response.status, Object.fromEntries(response.headers));
-      response.text().then(text => res.end(text));
-    });
-  };
-} else if (typeof self !== 'undefined') {
-  // Service Worker environment
-  self.addEventListener('fetch', event => {
-    if (event.request.url.includes('/api/database/emm_database.db.js')) {
-      event.respondWith(
-        event.request.text().then(body => 
-          handleRequest(event.request.method, event.request.url, body)
-        )
-      );
-    }
-  });
-} else {
-  // Browser environment - create a mock fetch handler
-  console.log('🗄️ Database API loaded in browser environment');
+  console.log('🗄️ Database API loaded and fetch interceptor installed');
 }
