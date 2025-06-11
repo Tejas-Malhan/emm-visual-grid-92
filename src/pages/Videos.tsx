@@ -15,13 +15,13 @@ const Videos = () => {
   useEffect(() => {
     const loadMedia = async () => {
       try {
-        console.log('🎥 Loading video media from NEW file database...');
-        await newFileDb.reloadFromFile();
+        console.log('🎥 Loading video media from FIXED localStorage database...');
+        await newFileDb.reloadFromStorage();
         const items = newFileDb.getMediaItems().filter(item => item.type === 'video');
-        console.log('✅ Video items loaded from NEW file database:', items);
+        console.log('✅ Video items loaded from FIXED localStorage database:', items);
         setMediaItems(items);
       } catch (error) {
-        console.error('❌ Error loading video items from NEW file database:', error);
+        console.error('❌ Error loading video items from FIXED localStorage database:', error);
       } finally {
         setLoading(false);
       }
@@ -57,7 +57,7 @@ const Videos = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-xl">Loading videos from NEW file database...</div>
+            <div className="text-xl">Loading videos from FIXED localStorage database...</div>
           </div>
         ) : mediaItems.length === 0 ? (
           <div className="text-center py-12">

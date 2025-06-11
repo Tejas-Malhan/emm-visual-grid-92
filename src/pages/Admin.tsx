@@ -35,41 +35,41 @@ const Admin = () => {
   const [newInstagramHandle, setNewInstagramHandle] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
 
-  // Load media items from new file database
+  // Load media items from fixed localStorage database
   const loadMediaItems = async () => {
     try {
-      console.log('Loading media items from new file database...');
-      await newFileDb.reloadFromFile();
+      console.log('Loading media items from FIXED localStorage database...');
+      await newFileDb.reloadFromStorage();
       const items = newFileDb.getMediaItems();
-      console.log('Loaded media items from new file database:', items);
+      console.log('Loaded media items from FIXED localStorage database:', items);
       setMediaItems(items);
     } catch (error) {
-      console.error('Error loading media items from new file database:', error);
+      console.error('Error loading media items from FIXED localStorage database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load media items from new file database",
+        description: "Failed to load media items from localStorage database",
       });
     } finally {
       setLoadingMedia(false);
     }
   };
 
-  // Load users from new file database (only for admins)
+  // Load users from fixed localStorage database (only for admins)
   const loadUsers = async () => {
     if (userRole !== 'admin') return;
     
     try {
-      await newFileDb.reloadFromFile();
+      await newFileDb.reloadFromStorage();
       const members = newFileDb.getMembers();
-      console.log('Loaded members from new file database:', members);
+      console.log('Loaded members from FIXED localStorage database:', members);
       setUsers(members);
     } catch (error) {
-      console.error('Error loading users from new file database:', error);
+      console.error('Error loading users from FIXED localStorage database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load users from new file database",
+        description: "Failed to load users from localStorage database",
       });
     } finally {
       setLoadingUsers(false);
@@ -94,7 +94,7 @@ const Admin = () => {
     }
 
     try {
-      console.log('Adding media to new file database with data:', {
+      console.log('Adding media to FIXED localStorage database with data:', {
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
@@ -115,11 +115,11 @@ const Admin = () => {
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
 
-      console.log('Added media item to new file database:', newItem);
+      console.log('Added media item to FIXED localStorage database:', newItem);
 
       toast({
         title: "Success",
-        description: "Media item saved to new file database successfully",
+        description: "Media item saved to localStorage database successfully",
       });
       
       // Reset form
@@ -131,11 +131,11 @@ const Admin = () => {
       // Reload media items
       await loadMediaItems();
     } catch (error) {
-      console.error('Error adding media to new file database:', error);
+      console.error('Error adding media to FIXED localStorage database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add media item to new file database",
+        description: "Failed to add media item to localStorage database",
       });
     }
   };
@@ -147,22 +147,22 @@ const Admin = () => {
       if (success) {
         toast({
           title: "Success",
-          description: "Media item deleted from new file database successfully",
+          description: "Media item deleted from localStorage database successfully",
         });
         loadMediaItems();
       } else {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to delete media item from new file database",
+          description: "Failed to delete media item from localStorage database",
         });
       }
     } catch (error) {
-      console.error('Error deleting media from new file database:', error);
+      console.error('Error deleting media from FIXED localStorage database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete media item from new file database",
+        description: "Failed to delete media item from localStorage database",
       });
     }
   };
@@ -186,11 +186,11 @@ const Admin = () => {
         role: newUserRole
       });
 
-      console.log('Added user to new file database:', newUser);
+      console.log('Added user to FIXED localStorage database:', newUser);
 
       toast({
         title: "Success",
-        description: "User saved to new file database successfully",
+        description: "User saved to localStorage database successfully",
       });
       
       // Reset form
@@ -203,11 +203,11 @@ const Admin = () => {
       // Reload users
       loadUsers();
     } catch (error) {
-      console.error('Error adding user to new file database:', error);
+      console.error('Error adding user to FIXED localStorage database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add user to new file database",
+        description: "Failed to add user to localStorage database",
       });
     }
   };
@@ -234,7 +234,7 @@ const Admin = () => {
             </h1>
             <p className="text-muted-foreground">Welcome back, {user?.username}</p>
             <p className="text-xs text-muted-foreground">
-              File Database | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
+              localStorage Database | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
             </p>
           </div>
           <Button variant="outline" onClick={handleSignOut}>
@@ -271,7 +271,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Add New Media (File Database)
+                  Add New Media (localStorage Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -322,7 +322,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddMedia} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Media to File Database
+                  Add Media to localStorage Database
                 </Button>
               </CardContent>
             </Card>
@@ -330,13 +330,13 @@ const Admin = () => {
             {/* Media List */}
             <Card>
               <CardHeader>
-                <CardTitle>File Database Media ({mediaItems.length})</CardTitle>
+                <CardTitle>localStorage Database Media ({mediaItems.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingMedia ? (
-                  <div className="text-center py-8">Loading media from file database...</div>
+                  <div className="text-center py-8">Loading media from localStorage database...</div>
                 ) : mediaItems.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No media items found in file database</div>
+                  <div className="text-center py-8 text-muted-foreground">No media items found in localStorage database</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {mediaItems.map((item) => (
@@ -366,7 +366,7 @@ const Admin = () => {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Media</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete this media item from the file database? This action cannot be undone.
+                                      Are you sure you want to delete this media item from the localStorage database? This action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -403,7 +403,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Plus className="h-5 w-5" />
-                  Add New User (File Database)
+                  Add New User (localStorage Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -455,7 +455,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddUser} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add User to File Database
+                  Add User to localStorage Database
                 </Button>
               </CardContent>
             </Card>
@@ -463,13 +463,13 @@ const Admin = () => {
             {/* Users List */}
             <Card>
               <CardHeader>
-                <CardTitle>File Database Users</CardTitle>
+                <CardTitle>localStorage Database Users</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingUsers ? (
-                  <div className="text-center py-8">Loading users from file database...</div>
+                  <div className="text-center py-8">Loading users from localStorage database...</div>
                 ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No users found in file database</div>
+                  <div className="text-center py-8 text-muted-foreground">No users found in localStorage database</div>
                 ) : (
                   <div className="space-y-4">
                     {users.map((user) => (
@@ -505,3 +505,5 @@ const Admin = () => {
 };
 
 export default Admin;
+
+}

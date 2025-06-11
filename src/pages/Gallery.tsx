@@ -12,13 +12,13 @@ const Gallery = () => {
   useEffect(() => {
     const loadMedia = async () => {
       try {
-        console.log('🖼️ Loading gallery media from NEW file database...');
-        await newFileDb.reloadFromFile();
+        console.log('🖼️ Loading gallery media from FIXED localStorage database...');
+        await newFileDb.reloadFromStorage();
         const items = newFileDb.getMediaItems().filter(item => item.type === 'photo');
-        console.log('✅ Gallery items loaded from NEW file database:', items);
+        console.log('✅ Gallery items loaded from FIXED localStorage database:', items);
         setMediaItems(items);
       } catch (error) {
-        console.error('❌ Error loading gallery items from NEW file database:', error);
+        console.error('❌ Error loading gallery items from FIXED localStorage database:', error);
       } finally {
         setLoading(false);
       }
@@ -54,7 +54,7 @@ const Gallery = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-xl">Loading gallery from NEW file database...</div>
+            <div className="text-xl">Loading gallery from FIXED localStorage database...</div>
           </div>
         ) : mediaItems.length === 0 ? (
           <div className="text-center py-12">
