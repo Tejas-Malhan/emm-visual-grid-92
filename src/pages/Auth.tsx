@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { LogIn, ArrowLeft } from "lucide-react";
 
 const Auth = () => {
   const [username, setUsername] = useState("");
@@ -25,21 +26,21 @@ const Auth = () => {
       if (error) {
         toast({
           variant: "destructive",
-          title: "Error",
+          title: "Authentication Failed",
           description: error.message,
         });
       } else {
         toast({
-          title: "Success",
-          description: "Signed in successfully!",
+          title: "Welcome back!",
+          description: "You've been signed in successfully.",
         });
         navigate("/admin");
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -47,47 +48,73 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white text-black flex items-center justify-center px-6">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Link to="/" className="text-2xl font-bold tracking-tight mb-4 block">
-            EMM
-          </Link>
-          <CardTitle>Admin Login</CardTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            Use username: <strong>admin</strong> and password: <strong>admin</strong>
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div>
-              <Input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
+    <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="w-full max-w-md">
+        <div className="mb-8">
+          <Button variant="ghost" size="sm" asChild className="mb-4">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Link>
+          </Button>
+        </div>
+        
+        <Card className="border-0 shadow-2xl">
+          <CardHeader className="text-center space-y-4 pb-8">
+            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+              <LogIn className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <CardTitle className="text-2xl font-light tracking-tight">Admin Access</CardTitle>
+              <p className="text-muted-foreground mt-2">
+                Sign in to manage your content
+              </p>
             </div>
-            <Button 
-              type="submit" 
-              className="w-full bg-black text-white hover:bg-gray-800"
-              disabled={loading}
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-sm font-medium">Username</label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">Password</label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-11"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full h-11"
+                disabled={loading}
+              >
+                {loading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+            
+            <div className="text-center text-sm text-muted-foreground">
+              <p className="bg-muted/50 p-3 rounded-lg">
+                <strong>Demo credentials:</strong><br />
+                Username: admin | Password: admin
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
