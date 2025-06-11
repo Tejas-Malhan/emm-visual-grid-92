@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { db } from '@/services/database';
+import { fileDb } from '@/services/fileDatabase';
 
 interface AuthContextType {
   user: any | null;
@@ -30,28 +30,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Check if user is already logged in (from localStorage)
     const storedUser = localStorage.getItem('currentUser');
-    console.log('Stored user:', storedUser);
+    console.log('Stored user in localStorage:', storedUser);
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
       setSession({ user: userData });
       setUserRole(userData.role);
-      console.log('Restored user session:', userData);
+      console.log('Restored user session from localStorage:', userData);
     }
     setLoading(false);
   }, []);
 
   const signIn = async (username: string, password: string) => {
-    console.log('Attempting sign in with:', username, password);
+    console.log('Attempting sign in with file database:', username, password);
     
     try {
-      // Use the local database service
-      const user = db.authenticateUser(username, password);
+      // Force reload from file database to get latest users
+      await fileDb.reloadFromFile();
       
-      console.log('Database authentication result:', user);
+      // Use the file database service
+      const user = fileDb.authenticateUser(username, password);
+      
+      console.log('File database authentication result:', user);
 
       if (!user) {
-        console.log('Authentication failed - invalid credentials');
+        console.log('Authentication failed - invalid credentials in file database');
         return { error: { message: 'Invalid username or password' } };
       }
 
@@ -63,19 +66,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         default_credit_name: user.default_credit_name
       };
 
-      console.log('Setting user data:', userData);
+      console.log('Setting user data from file database:', userData);
 
       setUser(userData);
       setSession({ user: userData });
       setUserRole(user.role);
       
-      // Store in localStorage for persistence
+      // Store in localStorage for persistence (as session backup only)
       localStorage.setItem('currentUser', JSON.stringify(userData));
 
       return { error: null };
     } catch (error) {
-      console.error('Sign in error:', error);
-      return { error: { message: 'An unexpected error occurred' } };
+      console.error('Sign in error with file database:', error);
+      return { error: { message: 'An unexpected error occurred with file database' } };
     }
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { db, MediaItem, Member } from "@/services/database";
+import { fileDb, MediaItem, Member } from "@/services/fileDatabase";
 import { LogOut, Upload, Users, Image, Video, Trash2, Plus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -36,38 +35,41 @@ const Admin = () => {
   const [newInstagramHandle, setNewInstagramHandle] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
 
-  // Load media items
+  // Load media items from file database
   const loadMediaItems = async () => {
     try {
-      console.log('Loading media items...');
-      const items = db.getMediaItems();
-      console.log('Loaded media items:', items);
+      console.log('Loading media items from file database...');
+      await fileDb.reloadFromFile();
+      const items = fileDb.getMediaItems();
+      console.log('Loaded media items from file database:', items);
       setMediaItems(items);
     } catch (error) {
-      console.error('Error loading media items:', error);
+      console.error('Error loading media items from file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load media items",
+        description: "Failed to load media items from file database",
       });
     } finally {
       setLoadingMedia(false);
     }
   };
 
-  // Load users (only for admins)
+  // Load users from file database (only for admins)
   const loadUsers = async () => {
     if (userRole !== 'admin') return;
     
     try {
-      const members = db.getMembers();
+      await fileDb.reloadFromFile();
+      const members = fileDb.getMembers();
+      console.log('Loaded members from file database:', members);
       setUsers(members);
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error('Error loading users from file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load users",
+        description: "Failed to load users from file database",
       });
     } finally {
       setLoadingUsers(false);
@@ -92,7 +94,7 @@ const Admin = () => {
     }
 
     try {
-      console.log('Adding media with data:', {
+      console.log('Adding media to file database with data:', {
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
@@ -105,7 +107,7 @@ const Admin = () => {
         ? newMediaUrls.split(',').map(url => url.trim()).filter(url => url)
         : [newMediaCoverUrl];
 
-      const newItem = db.addMediaItem({
+      const newItem = await fileDb.addMediaItem({
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: mediaUrls,
@@ -113,11 +115,11 @@ const Admin = () => {
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
 
-      console.log('Added media item:', newItem);
+      console.log('Added media item to file database:', newItem);
 
       toast({
         title: "Success",
-        description: "Media item added successfully",
+        description: "Media item saved to file database successfully",
       });
       
       // Reset form
@@ -129,38 +131,38 @@ const Admin = () => {
       // Reload media items
       await loadMediaItems();
     } catch (error) {
-      console.error('Error adding media:', error);
+      console.error('Error adding media to file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add media item",
+        description: "Failed to add media item to file database",
       });
     }
   };
 
   const handleDeleteMedia = async (id: string) => {
     try {
-      const success = db.deleteMediaItem(id);
+      const success = await fileDb.deleteMediaItem(id);
       
       if (success) {
         toast({
           title: "Success",
-          description: "Media item deleted successfully",
+          description: "Media item deleted from file database successfully",
         });
         loadMediaItems();
       } else {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to delete media item",
+          description: "Failed to delete media item from file database",
         });
       }
     } catch (error) {
-      console.error('Error deleting media:', error);
+      console.error('Error deleting media from file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete media item",
+        description: "Failed to delete media item from file database",
       });
     }
   };
@@ -176,7 +178,7 @@ const Admin = () => {
     }
 
     try {
-      const newUser = db.addMember({
+      const newUser = await fileDb.addMember({
         username: newUsername,
         password_hash: newPassword,
         default_credit_name: newCreditName,
@@ -184,9 +186,11 @@ const Admin = () => {
         role: newUserRole
       });
 
+      console.log('Added user to file database:', newUser);
+
       toast({
         title: "Success",
-        description: "User added successfully",
+        description: "User saved to file database successfully",
       });
       
       // Reset form
@@ -199,11 +203,11 @@ const Admin = () => {
       // Reload users
       loadUsers();
     } catch (error) {
-      console.error('Error adding user:', error);
+      console.error('Error adding user to file database:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add user",
+        description: "Failed to add user to file database",
       });
     }
   };
@@ -217,6 +221,7 @@ const Admin = () => {
   };
 
   const isAdmin = userRole === 'admin';
+  const dbStats = fileDb.getDatabaseStats();
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -228,6 +233,9 @@ const Admin = () => {
               {isAdmin ? 'Admin Dashboard' : 'Media Upload Portal'}
             </h1>
             <p className="text-muted-foreground">Welcome back, {user?.username}</p>
+            <p className="text-xs text-muted-foreground">
+              File Database: {dbStats.fileName} | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
+            </p>
           </div>
           <Button variant="outline" onClick={handleSignOut}>
             <LogOut className="h-4 w-4 mr-2" />
@@ -263,7 +271,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Add New Media
+                  Add New Media (File Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -314,7 +322,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddMedia} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Media
+                  Add Media to File Database
                 </Button>
               </CardContent>
             </Card>
@@ -322,13 +330,13 @@ const Admin = () => {
             {/* Media List */}
             <Card>
               <CardHeader>
-                <CardTitle>Existing Media ({mediaItems.length})</CardTitle>
+                <CardTitle>File Database Media ({mediaItems.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingMedia ? (
-                  <div className="text-center py-8">Loading media...</div>
+                  <div className="text-center py-8">Loading media from file database...</div>
                 ) : mediaItems.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No media items found</div>
+                  <div className="text-center py-8 text-muted-foreground">No media items found in file database</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {mediaItems.map((item) => (
@@ -358,7 +366,7 @@ const Admin = () => {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Media</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete this media item? This action cannot be undone.
+                                      Are you sure you want to delete this media item from the file database? This action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -395,7 +403,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Plus className="h-5 w-5" />
-                  Add New User
+                  Add New User (File Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -447,7 +455,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddUser} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add User
+                  Add User to File Database
                 </Button>
               </CardContent>
             </Card>
@@ -455,13 +463,13 @@ const Admin = () => {
             {/* Users List */}
             <Card>
               <CardHeader>
-                <CardTitle>Existing Users</CardTitle>
+                <CardTitle>File Database Users</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingUsers ? (
-                  <div className="text-center py-8">Loading users...</div>
+                  <div className="text-center py-8">Loading users from file database...</div>
                 ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No users found</div>
+                  <div className="text-center py-8 text-muted-foreground">No users found in file database</div>
                 ) : (
                   <div className="space-y-4">
                     {users.map((user) => (

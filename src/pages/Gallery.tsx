@@ -3,21 +3,23 @@ import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import InstagramGallery from "@/components/InstagramGallery";
 import { Link } from "react-router-dom";
-import { db, MediaItem } from "@/services/database";
+import { fileDb, MediaItem } from "@/services/fileDatabase";
 
 const Gallery = () => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadMedia = () => {
+    const loadMedia = async () => {
       try {
-        console.log('Loading gallery media...');
-        const items = db.getMediaItems().filter(item => item.type === 'photo');
-        console.log('Gallery items loaded:', items);
+        console.log('Loading gallery media from file database...');
+        // Force reload from file to get latest data
+        await fileDb.reloadFromFile();
+        const items = fileDb.getMediaItems().filter(item => item.type === 'photo');
+        console.log('Gallery items loaded from file database:', items);
         setMediaItems(items);
       } catch (error) {
-        console.error('Error loading gallery items:', error);
+        console.error('Error loading gallery items from file database:', error);
       } finally {
         setLoading(false);
       }
@@ -53,7 +55,7 @@ const Gallery = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-xl">Loading gallery...</div>
+            <div className="text-xl">Loading gallery from file database...</div>
           </div>
         ) : mediaItems.length === 0 ? (
           <div className="text-center py-12">
