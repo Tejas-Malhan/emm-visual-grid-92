@@ -15,8 +15,7 @@ const Members = () => {
     const loadMembers = async () => {
       try {
         console.log('👥 Loading members from SQLite3 database...');
-        await sqlite3Db.reloadFromDatabase();
-        const allMembers = sqlite3Db.getMembers();
+        const allMembers = await sqlite3Db.getMembers();
         console.log('✅ Members loaded from SQLite3:', allMembers);
         setMembers(allMembers);
       } catch (error) {

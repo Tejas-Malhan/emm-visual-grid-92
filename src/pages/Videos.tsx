@@ -16,8 +16,7 @@ const Videos = () => {
     const loadMedia = async () => {
       try {
         console.log('🎥 Loading videos from SQLite3 database...');
-        await sqlite3Db.reloadFromDatabase();
-        const items = sqlite3Db.getVideoItems();
+        const items = await sqlite3Db.getVideoItems();
         console.log('✅ Video items loaded from SQLite3:', items);
         setMediaItems(items);
       } catch (error) {

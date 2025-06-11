@@ -13,8 +13,7 @@ const Gallery = () => {
     const loadMedia = async () => {
       try {
         console.log('🖼️ Loading gallery photos from SQLite3 database...');
-        await sqlite3Db.reloadFromDatabase();
-        const items = sqlite3Db.getPhotoItems();
+        const items = await sqlite3Db.getPhotoItems();
         console.log('✅ Photo items loaded from SQLite3:', items);
         setMediaItems(items);
       } catch (error) {

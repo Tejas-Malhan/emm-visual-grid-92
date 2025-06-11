@@ -1,5 +1,6 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
-import { newFileDb } from '@/services/fileDatabase';
+import { sqlite3Db } from '@/services/sqlite3Database';
 
 interface AuthContextType {
   user: any | null;
@@ -41,27 +42,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (username: string, password: string) => {
     try {
-      await newFileDb.reloadFromStorage();
-      const user = newFileDb.authenticateUser(username, password);
+      console.log('🔐 Attempting to sign in user:', username);
+      const authenticatedUser = await sqlite3Db.authenticateUser(username, password);
       
-      if (!user) {
+      if (!authenticatedUser) {
+        console.log('❌ Authentication failed for user:', username);
         return { error: { message: 'Invalid credentials' } };
       }
 
       const userData = {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        default_credit_name: user.default_credit_name
+        id: authenticatedUser.id,
+        username: authenticatedUser.username,
+        role: authenticatedUser.role,
+        default_credit_name: authenticatedUser.default_credit_name
       };
 
       setUser(userData);
-      setUserRole(user.role);
+      setUserRole(authenticatedUser.role);
       localStorage.setItem('currentUser', JSON.stringify(userData));
 
+      console.log('✅ User signed in successfully:', userData);
       return { error: null };
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error('❌ Sign in error:', error);
       return { error: { message: 'Authentication failed' } };
     }
   };
@@ -70,6 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     setUserRole(null);
     localStorage.removeItem('currentUser');
+    console.log('👋 User signed out');
   };
 
   const value = {
