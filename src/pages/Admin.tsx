@@ -6,27 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { db, MediaItem, Member } from "@/services/database";
 import { LogOut, Upload, Users, Image, Video, Trash2, Plus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-
-interface MediaItem {
-  id: string;
-  type: 'photo' | 'video';
-  cover_url: string;
-  media_urls: string[];
-  description: string;
-  credits: string[];
-  uploaded_at: string;
-}
-
-interface User {
-  id: string;
-  username: string;
-  default_credit_name: string;
-  role: 'admin' | 'member';
-  created_at: string;
-}
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -38,7 +20,7 @@ const Admin = () => {
   const [loadingMedia, setLoadingMedia] = useState(true);
   
   // User state
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<Member[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   
   // Form states
@@ -56,31 +38,8 @@ const Admin = () => {
   // Load media items
   const loadMediaItems = async () => {
     try {
-      const { data, error } = await supabase
-        .from('media_items')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error loading media items:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load media items",
-        });
-      } else if (data) {
-        // Type-safe conversion from Supabase data to MediaItem
-        const typedMediaItems: MediaItem[] = data.map(item => ({
-          id: item.id,
-          type: item.type as 'photo' | 'video', // Type assertion since we control the data
-          cover_url: item.cover_url,
-          media_urls: item.media_urls || [],
-          description: item.description || '',
-          credits: item.credits || [],
-          uploaded_at: item.created_at || new Date().toISOString()
-        }));
-        setMediaItems(typedMediaItems);
-      }
+      const items = db.getMediaItems();
+      setMediaItems(items);
     } catch (error) {
       console.error('Error loading media items:', error);
       toast({
@@ -96,29 +55,8 @@ const Admin = () => {
   // Load users
   const loadUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error loading users:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load users",
-        });
-      } else if (data) {
-        // Type-safe conversion from Supabase data to User
-        const typedUsers: User[] = data.map(user => ({
-          id: user.id,
-          username: user.username,
-          default_credit_name: user.default_credit_name || '',
-          role: user.role as 'admin' | 'member',
-          created_at: user.created_at || new Date().toISOString()
-        }));
-        setUsers(typedUsers);
-      }
+      const members = db.getMembers();
+      setUsers(members);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
@@ -147,41 +85,27 @@ const Admin = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('media_items')
-        .insert({
-          type: newMediaType,
-          cover_url: newMediaCoverUrl,
-          media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
-          description: newMediaDescription,
-          credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
-          uploaded_by_user_id: user?.id || ''
-        })
-        .select()
-        .single();
+      const newItem = db.addMediaItem({
+        type: newMediaType,
+        cover_url: newMediaCoverUrl,
+        media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
+        description: newMediaDescription,
+        credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
+      });
 
-      if (error) {
-        console.error('Error adding media:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to add media item",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Media item added successfully",
-        });
-        
-        // Reset form
-        setNewMediaCoverUrl("");
-        setNewMediaUrls("");
-        setNewMediaDescription("");
-        setNewMediaCredits("");
-        
-        // Reload media items
-        loadMediaItems();
-      }
+      toast({
+        title: "Success",
+        description: "Media item added successfully",
+      });
+      
+      // Reset form
+      setNewMediaCoverUrl("");
+      setNewMediaUrls("");
+      setNewMediaDescription("");
+      setNewMediaCredits("");
+      
+      // Reload media items
+      loadMediaItems();
     } catch (error) {
       console.error('Error adding media:', error);
       toast({
@@ -194,24 +118,20 @@ const Admin = () => {
 
   const handleDeleteMedia = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('media_items')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting media:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to delete media item",
-        });
-      } else {
+      const success = db.deleteMediaItem(id);
+      
+      if (success) {
         toast({
           title: "Success",
           description: "Media item deleted successfully",
         });
         loadMediaItems();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to delete media item",
+        });
       }
     } catch (error) {
       console.error('Error deleting media:', error);
@@ -234,39 +154,26 @@ const Admin = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          username: newUsername,
-          password_hash: newPassword, // In production, this should be properly hashed
-          default_credit_name: newCreditName,
-          role: newUserRole
-        })
-        .select()
-        .single();
+      const newUser = db.addMember({
+        username: newUsername,
+        password_hash: newPassword,
+        default_credit_name: newCreditName,
+        role: newUserRole
+      });
 
-      if (error) {
-        console.error('Error adding user:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to add user",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "User added successfully",
-        });
-        
-        // Reset form
-        setNewUsername("");
-        setNewPassword("");
-        setNewCreditName("");
-        setNewUserRole('member');
-        
-        // Reload users
-        loadUsers();
-      }
+      toast({
+        title: "Success",
+        description: "User added successfully",
+      });
+      
+      // Reset form
+      setNewUsername("");
+      setNewPassword("");
+      setNewCreditName("");
+      setNewUserRole('member');
+      
+      // Reload users
+      loadUsers();
     } catch (error) {
       console.error('Error adding user:', error);
       toast({
