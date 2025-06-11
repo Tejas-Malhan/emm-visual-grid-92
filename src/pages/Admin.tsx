@@ -9,12 +9,32 @@ import { Link, useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, Save, Users, LogOut, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
-import { db, MediaItem, Member } from "@/services/database";
+import { supabase } from "@/integrations/supabase/client";
+
+interface MediaItem {
+  id: string;
+  type: 'photo' | 'video';
+  cover_url: string;
+  media_urls: string[];
+  description: string;
+  credits: string[];
+  uploaded_by_user_id: string;
+  created_at: string;
+}
+
+interface User {
+  id: string;
+  username: string;
+  password_hash: string;
+  default_credit_name: string;
+  role: 'admin' | 'member';
+  created_at: string;
+}
 
 const Admin = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Member | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,7 +49,7 @@ const Admin = () => {
   });
 
   // States for users
-  const [users, setUsers] = useState<Member[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [newUser, setNewUser] = useState({ 
     username: "", 
     password: "", 
@@ -53,19 +73,32 @@ const Admin = () => {
     }
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = db.authenticateUser(loginData.username, loginData.password);
     
-    if (user) {
+    try {
+      // Query Supabase users table for authentication
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', loginData.username)
+        .eq('password_hash', loginData.password)
+        .single();
+      
+      if (error || !user) {
+        toast.error("Invalid credentials");
+        return;
+      }
+
       setIsAuthenticated(true);
       setCurrentUser(user);
       localStorage.setItem('admin_authenticated', 'true');
       localStorage.setItem('admin_current_user', JSON.stringify(user));
       loadData();
       toast.success(`Welcome ${user.role === 'admin' ? 'to admin panel' : 'back'}!`);
-    } else {
-      toast.error("Invalid credentials");
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error("Login failed");
     }
   };
 
@@ -77,22 +110,61 @@ const Admin = () => {
     navigate('/');
   };
 
-  const loadData = () => {
-    setMediaItems(db.getMediaItems());
-    setUsers(db.getMembers());
+  const loadData = async () => {
+    try {
+      // Load media items from Supabase
+      const { data: mediaData, error: mediaError } = await supabase
+        .from('media_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (mediaError) {
+        console.error('Error loading media items:', mediaError);
+      } else {
+        setMediaItems(mediaData || []);
+      }
+
+      // Load users from Supabase
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (usersError) {
+        console.error('Error loading users:', usersError);
+      } else {
+        setUsers(usersData || []);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
   };
 
-  const addMediaItem = () => {
-    if (newMediaItem.cover_url) {
-      setIsAddingMediaItem(true);
-      
-      try {
-        db.addMediaItem({
-          ...newMediaItem,
-          media_urls: newMediaItem.media_urls.filter(url => url.trim() !== ""),
-          credits: newMediaItem.credits.filter(credit => credit.trim() !== "")
-        });
+  const addMediaItem = async () => {
+    if (!newMediaItem.cover_url || !currentUser) {
+      toast.error("Cover URL is required");
+      return;
+    }
 
+    setIsAddingMediaItem(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('media_items')
+        .insert([{
+          type: newMediaItem.type,
+          cover_url: newMediaItem.cover_url,
+          description: newMediaItem.description,
+          media_urls: newMediaItem.media_urls.filter(url => url.trim() !== ""),
+          credits: newMediaItem.credits.filter(credit => credit.trim() !== ""),
+          uploaded_by_user_id: currentUser.id
+        }])
+        .select();
+
+      if (error) {
+        console.error('Error adding media item:', error);
+        toast.error("Failed to add media item");
+      } else {
         toast.success("Media item added successfully");
         setNewMediaItem({ 
           cover_url: "", 
@@ -102,45 +174,66 @@ const Admin = () => {
           credits: [""]
         });
         loadData();
-      } catch (error) {
-        console.error('Error adding media item:', error);
-        toast.error("Failed to add media item");
-      } finally {
-        setIsAddingMediaItem(false);
       }
+    } catch (error) {
+      console.error('Error adding media item:', error);
+      toast.error("Failed to add media item");
+    } finally {
+      setIsAddingMediaItem(false);
     }
   };
 
-  const createUser = () => {
-    if (newUser.username && newUser.password) {
-      setIsCreatingUser(true);
-      
-      try {
-        db.addMember({
+  const createUser = async () => {
+    if (!newUser.username || !newUser.password) {
+      toast.error("Username and password are required");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
           username: newUser.username,
           password_hash: newUser.password,
           default_credit_name: newUser.default_credit_name || newUser.username,
-          role: newUser.role,
-        });
+          role: newUser.role
+        }])
+        .select();
 
+      if (error) {
+        console.error('Error creating user:', error);
+        toast.error("Failed to create user account");
+      } else {
         toast.success("User account created successfully");
         setNewUser({ username: "", password: "", default_credit_name: "", role: "member" });
         loadData();
-        
-      } catch (error) {
-        console.error('Error creating user:', error);
-        toast.error("Failed to create user account");
-      } finally {
-        setIsCreatingUser(false);
       }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error("Failed to create user account");
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
-  const deleteMediaItem = (id: string) => {
-    if (db.deleteMediaItem(id)) {
-      toast.success("Media item deleted successfully");
-      loadData();
-    } else {
+  const deleteMediaItem = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('media_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting media item:', error);
+        toast.error("Failed to delete media item");
+      } else {
+        toast.success("Media item deleted successfully");
+        loadData();
+      }
+    } catch (error) {
+      console.error('Error deleting media item:', error);
       toast.error("Failed to delete media item");
     }
   };
