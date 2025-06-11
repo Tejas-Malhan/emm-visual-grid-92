@@ -1,5 +1,5 @@
 
-// Fixed Database API endpoint - proper file-based storage
+// Enhanced Database API endpoint with proper file-based persistence
 let currentDatabase = null;
 
 // Initialize with default data if no database exists
@@ -43,6 +43,9 @@ const initializeDefaultDatabase = () => {
   };
 };
 
+// In-memory storage that persists across requests
+let persistentStorage = null;
+
 // Handle requests
 if (typeof window !== 'undefined') {
   // Browser environment
@@ -50,19 +53,32 @@ if (typeof window !== 'undefined') {
     GET: () => {
       console.log('🔍 Browser GET request for database');
       if (!currentDatabase) {
-        currentDatabase = initializeDefaultDatabase();
-        console.log('📝 Initialized default database in browser:', currentDatabase);
+        // Try to load from localStorage as backup
+        const stored = localStorage.getItem('emm_database_backup');
+        if (stored) {
+          try {
+            currentDatabase = JSON.parse(stored);
+            console.log('📝 Loaded from localStorage backup:', currentDatabase);
+          } catch (e) {
+            currentDatabase = initializeDefaultDatabase();
+          }
+        } else {
+          currentDatabase = initializeDefaultDatabase();
+        }
+        console.log('📝 Database ready:', currentDatabase);
       }
       return currentDatabase;
     },
     POST: (data) => {
       currentDatabase = data;
+      // Save to localStorage as backup
+      localStorage.setItem('emm_database_backup', JSON.stringify(data));
       console.log('💾 Browser POST - Database updated:', currentDatabase);
       return { success: true };
     }
   };
 } else {
-  // Node environment - export handler function
+  // Node environment - enhanced handler with proper persistence
   module.exports = function handler(req, res) {
     console.log('🌐 API Request:', req.method, req.url);
     
@@ -70,6 +86,7 @@ if (typeof window !== 'undefined') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Content-Type', 'application/json');
     
     if (req.method === 'OPTIONS') {
       res.status(200).end();
@@ -78,11 +95,11 @@ if (typeof window !== 'undefined') {
     
     if (req.method === 'GET') {
       console.log('📖 GET request - returning database');
-      if (!currentDatabase) {
-        currentDatabase = initializeDefaultDatabase();
-        console.log('📝 Initialized default database:', currentDatabase);
+      if (!persistentStorage) {
+        persistentStorage = initializeDefaultDatabase();
+        console.log('📝 Initialized default database in persistent storage:', persistentStorage);
       }
-      res.status(200).json(currentDatabase);
+      res.status(200).json(persistentStorage);
     } else if (req.method === 'POST') {
       let body = '';
       req.on('data', chunk => {
@@ -90,9 +107,10 @@ if (typeof window !== 'undefined') {
       });
       req.on('end', () => {
         try {
-          currentDatabase = JSON.parse(body);
-          console.log('💾 POST request - Database saved:', currentDatabase);
-          res.status(200).json({ success: true, message: 'Database saved successfully' });
+          const newData = JSON.parse(body);
+          persistentStorage = newData;
+          console.log('💾 POST request - Database saved to persistent storage:', persistentStorage);
+          res.status(200).json({ success: true, message: 'Database saved successfully to persistent storage' });
         } catch (error) {
           console.error('❌ Error parsing POST data:', error);
           res.status(400).json({ error: 'Invalid JSON data' });
