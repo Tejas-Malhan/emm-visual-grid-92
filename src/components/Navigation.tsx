@@ -11,7 +11,7 @@ const Navigation = () => {
   const navItems = [
     { name: "Gallery", path: "/gallery" },
     { name: "Videos", path: "/videos" },
-    { name: "About", path: "/about" },
+    { name: "Contact", path: "/contact" },
     { name: "Members", path: "/members" },
   ];
 
@@ -53,12 +53,6 @@ const Navigation = () => {
         >
           <LogOut className="h-4 w-4 mr-2" />
           Sign Out
-        </Button>
-      )}
-      
-      {!user && (
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/auth">Sign In</Link>
         </Button>
       )}
     </div>

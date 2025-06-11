@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Camera, Video, Users, Palette, Star, Quote } from "lucide-react";
+import { ArrowRight, Camera, Video, Users, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 
@@ -27,24 +27,6 @@ const Index = () => {
       icon: Palette,
       title: "Creative Direction",
       description: "Providing artistic guidance and vision to ensure every project exceeds expectations."
-    }
-  ];
-
-  const testimonials = [
-    {
-      quote: "Team EMM transformed our vision into reality. Their attention to detail and creative approach exceeded all expectations.",
-      author: "Sarah Johnson",
-      role: "Creative Director"
-    },
-    {
-      quote: "Professional, talented, and easy to work with. The quality of their work speaks for itself.",
-      author: "Michael Chen", 
-      role: "Brand Manager"
-    },
-    {
-      quote: "Every project with EMM has been a masterpiece. They consistently deliver exceptional results.",
-      author: "Emily Rodriguez",
-      role: "Marketing Lead"
     }
   ];
 
@@ -85,8 +67,8 @@ const Index = () => {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
-                <Link to="/about">
-                  Learn More
+                <Link to="/contact">
+                  Get In Touch
                 </Link>
               </Button>
             </div>
@@ -164,35 +146,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-light tracking-tight mb-6">
-              Client <span className="text-primary">Stories</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              What our clients say about working with Team EMM
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={testimonial.author} className="border-0 bg-card/50 backdrop-blur-sm animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-                <CardContent className="p-8">
-                  <Quote className="h-8 w-8 text-primary mb-6" />
-                  <p className="text-lg leading-relaxed mb-6 italic">"{testimonial.quote}"</p>
-                  <div>
-                    <p className="font-semibold">{testimonial.author}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-24 px-6 bg-primary/5">
         <div className="max-w-4xl mx-auto text-center">
@@ -204,14 +157,14 @@ const Index = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="text-lg px-8 py-6" asChild>
-              <Link to="/auth">
+              <Link to="/contact">
                 Get Started
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
-              <Link to="/about">
-                Learn About Us
+              <Link to="/members">
+                Meet Our Team
               </Link>
             </Button>
           </div>
@@ -242,8 +195,8 @@ const Index = () => {
             <div className="space-y-4">
               <h4 className="font-medium">Company</h4>
               <div className="space-y-2 text-sm">
-                <Link to="/about" className="block text-muted-foreground hover:text-foreground transition-colors">
-                  About
+                <Link to="/contact" className="block text-muted-foreground hover:text-foreground transition-colors">
+                  Contact
                 </Link>
                 <Link to="/members" className="block text-muted-foreground hover:text-foreground transition-colors">
                   Team

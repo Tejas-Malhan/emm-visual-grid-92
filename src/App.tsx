@@ -9,7 +9,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Gallery from "./pages/Gallery";
 import Videos from "./pages/Videos";
-import About from "./pages/About";
+import Contact from "./pages/Contact";
 import Members from "./pages/Members";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
@@ -28,7 +28,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/videos" element={<Videos />} />
-            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/members" element={<Members />} />
             <Route path="/auth" element={<Auth />} />
             <Route 

@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Mail, Phone, MapPin, Send } from "lucide-react";
+import { Mail, Phone, MapPin, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import Navigation from "@/components/Navigation";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -33,14 +34,12 @@ const Contact = () => {
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center text-lg font-semibold">
-              <ArrowLeft className="mr-2 h-5 w-5" />
-              Back to Home
+            <Link to="/" className="text-2xl font-bold tracking-tight hover:text-primary transition-colors">
+              EMM
             </Link>
-            <h1 className="text-2xl font-bold">Contact Us</h1>
-            <div className="w-24"></div>
+            <Navigation />
           </div>
         </div>
       </nav>
