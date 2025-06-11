@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { MediaItem } from "@/services/database";
+import { MediaItem } from "@/services/sqlite3Database";
 
 interface InstagramGalleryProps {
   mediaItems: MediaItem[];

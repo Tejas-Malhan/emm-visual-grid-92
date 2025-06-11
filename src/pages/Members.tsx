@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import { Link } from "react-router-dom";
 import { Instagram } from "lucide-react";
-import { db, Member } from "@/services/database";
+import { sqlite3Db, Member } from "@/services/sqlite3Database";
 
 const Members = () => {
   const [members, setMembers] = useState<Member[]>([]);
@@ -14,13 +14,13 @@ const Members = () => {
   useEffect(() => {
     const loadMembers = async () => {
       try {
-        console.log('Loading members from SQLite database...');
-        await db.reloadFromStorage();
-        const allMembers = db.getMembers();
-        console.log('Loaded members from SQLite database:', allMembers);
+        console.log('👥 Loading members from SQLite3 database...');
+        await sqlite3Db.reloadFromDatabase();
+        const allMembers = sqlite3Db.getMembers();
+        console.log('✅ Members loaded from SQLite3:', allMembers);
         setMembers(allMembers);
       } catch (error) {
-        console.error('Error loading members from SQLite database:', error);
+        console.error('❌ Error loading members from SQLite3:', error);
       } finally {
         setLoading(false);
       }
@@ -56,7 +56,7 @@ const Members = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-xl">Loading team members from SQLite database...</div>
+            <div className="text-xl">Loading team members from SQLite3 database...</div>
           </div>
         ) : members.length === 0 ? (
           <div className="text-center py-12">

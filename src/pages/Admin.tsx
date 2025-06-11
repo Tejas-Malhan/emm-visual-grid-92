@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { sqliteDb, MediaItem, Member } from "@/services/sqliteDatabase";
+import { sqlite3Db, MediaItem, Member } from "@/services/sqlite3Database";
 import { LogOut, Upload, Users, Image, Video, Trash2, Plus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -35,41 +35,42 @@ const Admin = () => {
   const [newInstagramHandle, setNewInstagramHandle] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'member'>('member');
 
-  // Load media items from SQLite database
+  // Load media items from SQLite3 database
   const loadMediaItems = async () => {
     try {
-      console.log('Loading media items from SQLite database...');
-      await sqliteDb.reloadFromStorage();
-      const items = sqliteDb.getMediaItems();
-      console.log('Loaded media items from SQLite database:', items);
+      console.log('📊 Admin: Loading media items from SQLite3...');
+      await sqlite3Db.reloadFromDatabase();
+      const items = sqlite3Db.getMediaItems();
+      console.log('✅ Admin: Media items loaded from SQLite3:', items);
       setMediaItems(items);
     } catch (error) {
-      console.error('Error loading media items from SQLite database:', error);
+      console.error('❌ Admin: Error loading media items from SQLite3:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load media items from SQLite database",
+        description: "Failed to load media items from SQLite3 database",
       });
     } finally {
       setLoadingMedia(false);
     }
   };
 
-  // Load users from SQLite database (only for admins)
+  // Load users from SQLite3 database (only for admins)
   const loadUsers = async () => {
     if (userRole !== 'admin') return;
     
     try {
-      await sqliteDb.reloadFromStorage();
-      const members = sqliteDb.getMembers();
-      console.log('Loaded members from SQLite database:', members);
+      console.log('👥 Admin: Loading users from SQLite3...');
+      await sqlite3Db.reloadFromDatabase();
+      const members = sqlite3Db.getMembers();
+      console.log('✅ Admin: Users loaded from SQLite3:', members);
       setUsers(members);
     } catch (error) {
-      console.error('Error loading users from SQLite database:', error);
+      console.error('❌ Admin: Error loading users from SQLite3:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load users from SQLite database",
+        description: "Failed to load users from SQLite3 database",
       });
     } finally {
       setLoadingUsers(false);
@@ -94,20 +95,14 @@ const Admin = () => {
     }
 
     try {
-      console.log('Adding media to SQLite database with data:', {
-        type: newMediaType,
-        cover_url: newMediaCoverUrl,
-        media_urls: newMediaUrls.split(',').map(url => url.trim()).filter(url => url),
-        description: newMediaDescription,
-        credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
-      });
+      console.log('📊 Admin: Adding media to SQLite3...');
 
       // If no media URLs provided, use cover URL as the single media URL
       const mediaUrls = newMediaUrls.trim() 
         ? newMediaUrls.split(',').map(url => url.trim()).filter(url => url)
         : [newMediaCoverUrl];
 
-      const newItem = await sqliteDb.addMediaItem({
+      const newItem = await sqlite3Db.addMediaItem({
         type: newMediaType,
         cover_url: newMediaCoverUrl,
         media_urls: mediaUrls,
@@ -115,11 +110,11 @@ const Admin = () => {
         credits: newMediaCredits.split(',').map(credit => credit.trim()).filter(credit => credit),
       });
 
-      console.log('Added media item to SQLite database:', newItem);
+      console.log('✅ Admin: Media item added to SQLite3:', newItem);
 
       toast({
         title: "Success",
-        description: "Media item saved to SQLite database successfully",
+        description: "Media item saved to SQLite3 database successfully",
       });
       
       // Reset form
@@ -131,38 +126,39 @@ const Admin = () => {
       // Reload media items
       await loadMediaItems();
     } catch (error) {
-      console.error('Error adding media to SQLite database:', error);
+      console.error('❌ Admin: Error adding media to SQLite3:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add media item to SQLite database",
+        description: "Failed to add media item to SQLite3 database",
       });
     }
   };
 
   const handleDeleteMedia = async (id: string) => {
     try {
-      const success = await sqliteDb.deleteMediaItem(id);
+      console.log('🗑️ Admin: Deleting media from SQLite3:', id);
+      const success = await sqlite3Db.deleteMediaItem(id);
       
       if (success) {
         toast({
           title: "Success",
-          description: "Media item deleted from SQLite database successfully",
+          description: "Media item deleted from SQLite3 database successfully",
         });
         loadMediaItems();
       } else {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to delete media item from SQLite database",
+          description: "Failed to delete media item from SQLite3 database",
         });
       }
     } catch (error) {
-      console.error('Error deleting media from SQLite database:', error);
+      console.error('❌ Admin: Error deleting media from SQLite3:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete media item from SQLite database",
+        description: "Failed to delete media item from SQLite3 database",
       });
     }
   };
@@ -178,7 +174,9 @@ const Admin = () => {
     }
 
     try {
-      const newUser = await sqliteDb.addMember({
+      console.log('👤 Admin: Adding user to SQLite3...');
+      
+      const newUser = await sqlite3Db.addMember({
         username: newUsername,
         password_hash: newPassword,
         default_credit_name: newCreditName,
@@ -186,11 +184,11 @@ const Admin = () => {
         role: newUserRole
       });
 
-      console.log('Added user to SQLite database:', newUser);
+      console.log('✅ Admin: User added to SQLite3:', newUser);
 
       toast({
         title: "Success",
-        description: "User saved to SQLite database successfully",
+        description: "User saved to SQLite3 database successfully",
       });
       
       // Reset form
@@ -203,11 +201,11 @@ const Admin = () => {
       // Reload users
       loadUsers();
     } catch (error) {
-      console.error('Error adding user to SQLite database:', error);
+      console.error('❌ Admin: Error adding user to SQLite3:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add user to SQLite database",
+        description: "Failed to add user to SQLite3 database",
       });
     }
   };
@@ -221,7 +219,7 @@ const Admin = () => {
   };
 
   const isAdmin = userRole === 'admin';
-  const dbStats = sqliteDb.getDatabaseStats();
+  const dbStats = sqlite3Db.getDatabaseStats();
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -234,7 +232,7 @@ const Admin = () => {
             </h1>
             <p className="text-muted-foreground">Welcome back, {user?.username}</p>
             <p className="text-xs text-muted-foreground">
-              SQLite Database | Items: {dbStats.mediaItems} | Users: {dbStats.members} | Version: {dbStats.version}
+              SQLite3 Database | Photos: {dbStats.photoItems} | Videos: {dbStats.videoItems} | Members: {dbStats.members} | Version: {dbStats.version}
             </p>
           </div>
           <Button variant="outline" onClick={handleSignOut}>
@@ -271,7 +269,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Add New Media (SQLite Database)
+                  Add New Media (SQLite3 Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -322,7 +320,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddMedia} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Media to SQLite Database
+                  Add Media to SQLite3 Database
                 </Button>
               </CardContent>
             </Card>
@@ -330,13 +328,13 @@ const Admin = () => {
             {/* Media List */}
             <Card>
               <CardHeader>
-                <CardTitle>SQLite Database Media ({mediaItems.length})</CardTitle>
+                <CardTitle>SQLite3 Database Media ({mediaItems.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingMedia ? (
-                  <div className="text-center py-8">Loading media from SQLite database...</div>
+                  <div className="text-center py-8">Loading media from SQLite3 database...</div>
                 ) : mediaItems.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No media items found in SQLite database</div>
+                  <div className="text-center py-8 text-muted-foreground">No media items found in SQLite3 database</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {mediaItems.map((item) => (
@@ -366,7 +364,7 @@ const Admin = () => {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Media</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete this media item from the SQLite database? This action cannot be undone.
+                                      Are you sure you want to delete this media item from the SQLite3 database? This action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -403,7 +401,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Plus className="h-5 w-5" />
-                  Add New User (SQLite Database)
+                  Add New User (SQLite3 Database)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -455,7 +453,7 @@ const Admin = () => {
                 </div>
                 <Button onClick={handleAddUser} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add User to SQLite Database
+                  Add User to SQLite3 Database
                 </Button>
               </CardContent>
             </Card>
@@ -463,13 +461,13 @@ const Admin = () => {
             {/* Users List */}
             <Card>
               <CardHeader>
-                <CardTitle>SQLite Database Users</CardTitle>
+                <CardTitle>SQLite3 Database Users</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingUsers ? (
-                  <div className="text-center py-8">Loading users from SQLite database...</div>
+                  <div className="text-center py-8">Loading users from SQLite3 database...</div>
                 ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No users found in SQLite database</div>
+                  <div className="text-center py-8 text-muted-foreground">No users found in SQLite3 database</div>
                 ) : (
                   <div className="space-y-4">
                     {users.map((user) => (
@@ -505,3 +503,5 @@ const Admin = () => {
 };
 
 export default Admin;
+
+}

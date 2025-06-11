@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import InstagramGallery from "@/components/InstagramGallery";
 import { Link } from "react-router-dom";
-import { sqliteDb, MediaItem } from "@/services/sqliteDatabase";
+import { sqlite3Db, MediaItem } from "@/services/sqlite3Database";
 
 const Gallery = () => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -12,13 +12,13 @@ const Gallery = () => {
   useEffect(() => {
     const loadMedia = async () => {
       try {
-        console.log('🖼️ Loading gallery media from SQLite database...');
-        await sqliteDb.reloadFromStorage();
-        const items = sqliteDb.getMediaItems().filter(item => item.type === 'photo');
-        console.log('✅ Gallery items loaded from SQLite database:', items);
+        console.log('🖼️ Loading gallery photos from SQLite3 database...');
+        await sqlite3Db.reloadFromDatabase();
+        const items = sqlite3Db.getPhotoItems();
+        console.log('✅ Photo items loaded from SQLite3:', items);
         setMediaItems(items);
       } catch (error) {
-        console.error('❌ Error loading gallery items from SQLite database:', error);
+        console.error('❌ Error loading gallery items from SQLite3:', error);
       } finally {
         setLoading(false);
       }
@@ -54,7 +54,7 @@ const Gallery = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="text-xl">Loading gallery from SQLite database...</div>
+            <div className="text-xl">Loading gallery from SQLite3 database...</div>
           </div>
         ) : mediaItems.length === 0 ? (
           <div className="text-center py-12">

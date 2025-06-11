@@ -1,0 +1,148 @@
+
+// SQLite3 Binary Database API Endpoint
+const STORAGE_KEY = 'emm_sqlite3_db';
+
+// Initialize localStorage-based SQLite3 simulation
+let databaseData = null;
+
+function loadDatabase() {
+  if (databaseData === null) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        databaseData = stored ? JSON.parse(stored) : null;
+      }
+    } catch (error) {
+      console.error('SQLite3: Error loading database:', error);
+      databaseData = null;
+    }
+  }
+  return databaseData;
+}
+
+function saveDatabase(data) {
+  databaseData = data;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      console.log('SQLite3: Database saved to localStorage');
+    }
+  } catch (error) {
+    console.error('SQLite3: Error saving database:', error);
+  }
+}
+
+// Browser fetch interceptor for SQLite3
+if (typeof window !== 'undefined') {
+  const originalFetch = window.fetch;
+  
+  window.fetch = function(url, options = {}) {
+    if (typeof url === 'string' && url.includes('/api/sqlite3/emm.db')) {
+      console.log('🗄️ SQLite3: Intercepted request:', options.method, url);
+      
+      const method = options.method || 'GET';
+      const body = options.body || '';
+      
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Content-Type': 'application/json'
+      };
+      
+      if (method === 'OPTIONS') {
+        return Promise.resolve(new Response(null, { status: 200, headers }));
+      }
+      
+      if (method === 'GET') {
+        const data = loadDatabase();
+        console.log('🗄️ SQLite3: GET response:', data);
+        
+        if (data) {
+          return Promise.resolve(new Response(JSON.stringify(data), { status: 200, headers }));
+        } else {
+          return Promise.resolve(new Response(JSON.stringify({ error: 'Database not initialized' }), { status: 404, headers }));
+        }
+      }
+      
+      if (method === 'POST') {
+        console.log('🗄️ SQLite3: Processing POST request');
+        console.log('🗄️ SQLite3: Request body:', body);
+        
+        try {
+          const requestData = JSON.parse(body);
+          const { action, item, member, data, id } = requestData;
+          
+          console.log('🗄️ SQLite3: Action:', action);
+          
+          if (action === 'save_database' && data) {
+            console.log('🗄️ SQLite3: Saving entire database');
+            saveDatabase(data);
+            return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200, headers }));
+          }
+          
+          const currentData = loadDatabase();
+          if (!currentData) {
+            return Promise.resolve(new Response(JSON.stringify({ error: 'Database not initialized' }), { status: 500, headers }));
+          }
+          
+          if (action === 'add_media' && item) {
+            console.log('🗄️ SQLite3: Adding media item');
+            currentData.media_items = currentData.media_items || [];
+            currentData.media_items.push(item);
+            currentData.last_updated = new Date().toISOString();
+            currentData.version = (currentData.version || 0) + 1;
+            
+            saveDatabase(currentData);
+            console.log('✅ SQLite3: Media item added successfully');
+            return Promise.resolve(new Response(JSON.stringify({ success: true, id: item.id }), { status: 200, headers }));
+          }
+          
+          if (action === 'delete_media' && id) {
+            console.log('🗄️ SQLite3: Deleting media item:', id);
+            currentData.media_items = currentData.media_items.filter(mediaItem => mediaItem.id !== id);
+            currentData.last_updated = new Date().toISOString();
+            currentData.version = (currentData.version || 0) + 1;
+            
+            saveDatabase(currentData);
+            console.log('✅ SQLite3: Media item deleted successfully');
+            return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200, headers }));
+          }
+          
+          if (action === 'add_member' && member) {
+            console.log('🗄️ SQLite3: Adding member');
+            console.log('🗄️ SQLite3: Member data:', member);
+            
+            currentData.members = currentData.members || [];
+            currentData.members.push(member);
+            currentData.last_updated = new Date().toISOString();
+            currentData.version = (currentData.version || 0) + 1;
+            
+            saveDatabase(currentData);
+            console.log('✅ SQLite3: Member added successfully');
+            return Promise.resolve(new Response(JSON.stringify({ success: true, id: member.id }), { status: 200, headers }));
+          }
+          
+          console.error('❌ SQLite3: Invalid action:', action);
+          return Promise.resolve(new Response(JSON.stringify({ 
+            error: 'Invalid action',
+            received: { action, hasItem: !!item, hasMember: !!member, hasData: !!data, hasId: !!id }
+          }), { status: 400, headers }));
+          
+        } catch (error) {
+          console.error('❌ SQLite3: Error parsing request:', error);
+          return Promise.resolve(new Response(JSON.stringify({ 
+            error: 'Invalid JSON',
+            details: error.message 
+          }), { status: 400, headers }));
+        }
+      }
+      
+      return Promise.resolve(new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers }));
+    }
+    
+    return originalFetch.apply(this, arguments);
+  };
+  
+  console.log('🗄️ SQLite3 Database API loaded');
+}

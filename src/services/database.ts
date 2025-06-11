@@ -1,3 +1,3 @@
 
-// Updated database service that uses SQLite3
-export { sqliteDb as db, type MediaItem, type Member } from './sqliteDatabase';
+// Updated database service that uses proper SQLite3 implementation
+export { sqlite3Db as db, type MediaItem, type Member } from './sqlite3Database';
