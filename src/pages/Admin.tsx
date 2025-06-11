@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { db, MediaItem, Member } from "@/services/database";
 const Admin = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -42,8 +44,11 @@ const Admin = () => {
   useEffect(() => {
     // Check if already authenticated
     const authStatus = localStorage.getItem('admin_authenticated');
-    if (authStatus === 'true') {
+    const storedUser = localStorage.getItem('admin_current_user');
+    if (authStatus === 'true' && storedUser) {
+      const userData = JSON.parse(storedUser);
       setIsAuthenticated(true);
+      setCurrentUser(userData);
       loadData();
     }
   }, []);
@@ -52,19 +57,23 @@ const Admin = () => {
     e.preventDefault();
     const user = db.authenticateUser(loginData.username, loginData.password);
     
-    if (user && user.role === 'admin') {
+    if (user) {
       setIsAuthenticated(true);
+      setCurrentUser(user);
       localStorage.setItem('admin_authenticated', 'true');
+      localStorage.setItem('admin_current_user', JSON.stringify(user));
       loadData();
-      toast.success("Welcome to admin panel!");
+      toast.success(`Welcome ${user.role === 'admin' ? 'to admin panel' : 'back'}!`);
     } else {
-      toast.error("Invalid credentials or insufficient permissions");
+      toast.error("Invalid credentials");
     }
   };
 
   const handleSignOut = () => {
     setIsAuthenticated(false);
+    setCurrentUser(null);
     localStorage.removeItem('admin_authenticated');
+    localStorage.removeItem('admin_current_user');
     navigate('/');
   };
 
@@ -109,7 +118,7 @@ const Admin = () => {
       try {
         db.addMember({
           username: newUser.username,
-          password_hash: newUser.password, // In production, hash this properly
+          password_hash: newUser.password,
           default_credit_name: newUser.default_credit_name || newUser.username,
           role: newUser.role,
         });
@@ -184,7 +193,10 @@ const Admin = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center">Admin Login</CardTitle>
+            <CardTitle className="text-center">Login</CardTitle>
+            <p className="text-center text-sm text-muted-foreground">
+              Admin or Member Access
+            </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
@@ -222,6 +234,8 @@ const Admin = () => {
     );
   }
 
+  const isAdmin = currentUser?.role === 'admin';
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -233,10 +247,15 @@ const Admin = () => {
             </Link>
             <div className="flex items-center gap-4">
               <Navigation />
-              <Button variant="outline" onClick={handleSignOut} className="flex items-center gap-2">
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {currentUser?.username} ({currentUser?.role})
+                </span>
+                <Button variant="outline" onClick={handleSignOut} className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -244,16 +263,18 @@ const Admin = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="text-center mb-16">
-          <h1 className="text-6xl font-light tracking-tight mb-6">Admin Panel</h1>
+          <h1 className="text-6xl font-light tracking-tight mb-6">
+            {isAdmin ? 'Admin Panel' : 'Member Panel'}
+          </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Manage your media content and team members
+            {isAdmin ? 'Manage your media content and team members' : 'Manage your media content'}
           </p>
         </div>
 
         <Tabs defaultValue="media" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <TabsTrigger value="media">Media Items</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
+            {isAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="media" className="space-y-8">
@@ -388,74 +409,76 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="users" className="space-y-8">
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Create New User Account
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Input
-                  placeholder="Username"
-                  value={newUser.username}
-                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                />
-                <Input
-                  placeholder="Password (minimum 6 characters)"
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                />
-                <Input
-                  placeholder="Default Credit Name (optional)"
-                  value={newUser.default_credit_name}
-                  onChange={(e) => setNewUser({ ...newUser, default_credit_name: e.target.value })}
-                />
-                <select
-                  className="w-full p-2 border rounded-md"
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as "admin" | "member" })}
-                >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <Button 
-                  onClick={createUser} 
-                  disabled={isCreatingUser}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isCreatingUser ? "Creating..." : "Create User"}
-                </Button>
-              </CardContent>
-            </Card>
+          {isAdmin && (
+            <TabsContent value="users" className="space-y-8">
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Create New User Account
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Input
+                    placeholder="Username"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Password (minimum 6 characters)"
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Default Credit Name (optional)"
+                    value={newUser.default_credit_name}
+                    onChange={(e) => setNewUser({ ...newUser, default_credit_name: e.target.value })}
+                  />
+                  <select
+                    className="w-full p-2 border rounded-md"
+                    value={newUser.role}
+                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value as "admin" | "member" })}
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <Button 
+                    onClick={createUser} 
+                    disabled={isCreatingUser}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {isCreatingUser ? "Creating..." : "Create User"}
+                  </Button>
+                </CardContent>
+              </Card>
 
-            <div className="grid gap-4">
-              {users.map((user) => (
-                <Card key={user.id}>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">{user.username}</h3>
-                        <p className="text-muted-foreground mb-1">Default Credit: {user.default_credit_name || 'Not set'}</p>
-                        <p className="text-muted-foreground">Role: {user.role}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Created: {new Date(user.created_at).toLocaleDateString()}
-                        </p>
+              <div className="grid gap-4">
+                {users.map((user) => (
+                  <Card key={user.id}>
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-semibold mb-2">{user.username}</h3>
+                          <p className="text-muted-foreground mb-1">Default Credit: {user.default_credit_name || 'Not set'}</p>
+                          <p className="text-muted-foreground">Role: {user.role}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Created: {new Date(user.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
