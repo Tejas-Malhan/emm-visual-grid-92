@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     try {
       // Force reload from file database to get latest users
-      await newFileDb.reloadFromFile();
+      await newFileDb.reloadFromStorage();
       
       // Use the new file database service
       const user = newFileDb.authenticateUser(username, password);
