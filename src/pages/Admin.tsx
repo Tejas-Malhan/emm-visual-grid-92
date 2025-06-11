@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -469,26 +470,27 @@ const Admin = () => {
                 ) : users.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">No users found in SQLite3 database</div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {users.map((user) => (
-                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{user.username}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {user.default_credit_name || 'No credit name set'}
-                          </p>
+                      <div key={user.id} className="border rounded-lg p-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium">{user.username}</h4>
+                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                              {user.role}
+                            </Badge>
+                          </div>
+                          {user.default_credit_name && (
+                            <p className="text-sm text-muted-foreground">
+                              Credit Name: {user.default_credit_name}
+                            </p>
+                          )}
                           {user.instagram_handle && (
                             <p className="text-sm text-muted-foreground">
                               Instagram: {user.instagram_handle}
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground">
-                            Created: {new Date(user.created_at).toLocaleDateString()}
-                          </p>
                         </div>
-                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                          {user.role}
-                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -503,5 +505,3 @@ const Admin = () => {
 };
 
 export default Admin;
-
-}
