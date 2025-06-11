@@ -38,7 +38,8 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     );
   }
 
-  // Block access for non-admin users trying to access admin pages
+  // Block access for non-authenticated users
+  // For admin routes, only block if requireAdmin is true and user is not admin
   if (!user || (requireAdmin && userRole !== 'admin')) {
     return null;
   }

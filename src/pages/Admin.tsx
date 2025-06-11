@@ -11,7 +11,7 @@ import { LogOut, Upload, Users, Image, Video, Trash2, Plus } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const Admin = () => {
-  const { user, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"media" | "users">("media");
   
@@ -55,8 +55,10 @@ const Admin = () => {
     }
   };
 
-  // Load users
+  // Load users (only for admins)
   const loadUsers = async () => {
+    if (userRole !== 'admin') return;
+    
     try {
       const members = db.getMembers();
       setUsers(members);
@@ -74,8 +76,10 @@ const Admin = () => {
 
   useEffect(() => {
     loadMediaItems();
-    loadUsers();
-  }, []);
+    if (userRole === 'admin') {
+      loadUsers();
+    }
+  }, [userRole]);
 
   const handleAddMedia = async () => {
     if (!newMediaCoverUrl || !newMediaDescription) {
@@ -207,13 +211,17 @@ const Admin = () => {
     });
   };
 
+  const isAdmin = userRole === 'admin';
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <h1 className="text-3xl font-bold">
+              {isAdmin ? 'Admin Dashboard' : 'Media Upload Portal'}
+            </h1>
             <p className="text-muted-foreground">Welcome back, {user?.username}</p>
           </div>
           <Button variant="outline" onClick={handleSignOut}>
@@ -222,26 +230,28 @@ const Admin = () => {
           </Button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-8">
-          <Button
-            variant={activeTab === "media" ? "default" : "outline"}
-            onClick={() => setActiveTab("media")}
-          >
-            <Image className="h-4 w-4 mr-2" />
-            Media Management
-          </Button>
-          <Button
-            variant={activeTab === "users" ? "default" : "outline"}
-            onClick={() => setActiveTab("users")}
-          >
-            <Users className="h-4 w-4 mr-2" />
-            User Management
-          </Button>
-        </div>
+        {/* Tabs - Only show for admins */}
+        {isAdmin && (
+          <div className="flex gap-4 mb-8">
+            <Button
+              variant={activeTab === "media" ? "default" : "outline"}
+              onClick={() => setActiveTab("media")}
+            >
+              <Image className="h-4 w-4 mr-2" />
+              Media Management
+            </Button>
+            <Button
+              variant={activeTab === "users" ? "default" : "outline"}
+              onClick={() => setActiveTab("users")}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              User Management
+            </Button>
+          </div>
+        )}
 
-        {/* Media Management Tab */}
-        {activeTab === "media" && (
+        {/* Media Management Tab - Always visible */}
+        {(activeTab === "media" || !isAdmin) && (
           <div className="space-y-6">
             {/* Add Media Form */}
             <Card>
@@ -331,27 +341,30 @@ const Admin = () => {
                               {item.type === 'photo' ? <Image className="h-3 w-3 mr-1" /> : <Video className="h-3 w-3 mr-1" />}
                               {item.type}
                             </Badge>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Media</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this media item? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteMedia(item.id)}>
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            {/* Only show delete button for admins */}
+                            {isAdmin && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Media</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this media item? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteMedia(item.id)}>
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                           </div>
                           <p className="text-sm font-medium">{item.description}</p>
                           {item.credits.length > 0 && (
@@ -369,8 +382,8 @@ const Admin = () => {
           </div>
         )}
 
-        {/* User Management Tab */}
-        {activeTab === "users" && (
+        {/* User Management Tab - Only for admins */}
+        {isAdmin && activeTab === "users" && (
           <div className="space-y-6">
             {/* Add User Form */}
             <Card>
